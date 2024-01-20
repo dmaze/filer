@@ -52,6 +52,7 @@ defmodule FilerWeb.MixProject do
       {:filer, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
+      {:petal_components, "~> 1.0"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end

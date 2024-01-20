@@ -7,9 +7,8 @@ defmodule FilerWeb.FilesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <.flash_group flash={@flash} />
     <div class="flex max-w-full">
-      <div class="p-2 max-w-96 w-1/4 outline outline-1"><.listing files={@files} /></div>
+      <div class="p-2 max-w-96 w-1/4 border rounded-md"><.listing files={@files} /></div>
       <div class="p-2 grow"><.details file={@file} /></div>
     </div>
     """
@@ -75,6 +74,7 @@ defmodule FilerWeb.FilesLive do
 
     socket =
       socket
+      |> assign(:current_page, :files)
       |> assign(:page_title, "Files")
       |> assign(:files, Filer.Repo.all(q))
       |> assign(:file, nil)

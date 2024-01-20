@@ -17,8 +17,16 @@ defmodule FilerWeb.LabelsLive do
   def category_list(assigns) do
     ~H"""
     <div class="flex">
-      <div class="grow">Categories</div>
-      <button class="border-solid">New&npsp;<Heroicons.plus /></button>
+      <div class="grow">
+        <.h3>Categories</.h3>
+      </div>
+      <.button
+        link_type="live_patch"
+        to={~p"/labels/new"}
+        label="New"
+        variant="outline"
+        icon={:plus}
+      />
     </div>
     <ul>
       <li :for={c <- @categories}>
@@ -42,6 +50,7 @@ defmodule FilerWeb.LabelsLive do
 
     socket =
       socket
+      |> assign(:current_page, :labels)
       |> assign(:page_title, "Labels")
       |> assign(:categories, Filer.Repo.all(q))
       |> assign(:category, nil)

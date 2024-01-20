@@ -83,6 +83,8 @@ defmodule FilerWeb do
     quote do
       # HTML escaping functionality
       import Phoenix.HTML
+      # Petal component framework
+      use PetalComponents
       # Core UI components and translation
       import FilerWeb.CoreComponents
       import FilerWeb.Gettext
