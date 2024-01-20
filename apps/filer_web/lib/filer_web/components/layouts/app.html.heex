@@ -1,9 +1,12 @@
 <header class="px-4 sm:px-6 lg:px-8">
   <div class="flex items-center justify-between border-b border-zinc-100 py-3">
     <div class="flex items-center gap-4">
-      <a href="/">
+      <.link class={if @socket.view == FilerWeb.FilesLive, do: "font-bold"} navigate={~p"/files"}>
         Files
-      </a>
+      </.link>
+      <.link class={if @socket.view == FilerWeb.LabelsLive, do: "font-bold"} navigate={~p"/labels"}>
+        Labels
+      </.link>
     </div>
   </div>
 </header>

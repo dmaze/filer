@@ -21,6 +21,9 @@ defmodule FilerWeb.Router do
     live "/files", FilesLive
     live "/files/:id", FilesLive
     get "/contents/:id/png", ContentsController, :png
+    live "/labels", LabelsLive
+    live "/labels/new", LabelsLive
+    live "/labels/:id", LabelsLive
   end
 
   # Other scopes may use custom stacks.
