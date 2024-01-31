@@ -1,5 +1,4 @@
 defmodule FilerWeb.FilesLive do
-  alias FilerWeb.ContentLabelsComponent
   use FilerWeb, :live_view
   import Ecto.Query, only: [from: 2]
 
@@ -66,12 +65,7 @@ defmodule FilerWeb.FilesLive do
           variant={if @live_action == :labels, do: "inverted", else: nil}
         />
       </div>
-      <.live_component
-        :if={@live_action == :labels}
-        module={ContentLabelsComponent}
-        id="labels"
-        content={@file.content}
-      />
+      <.content_labels :if={@live_action == :labels} content={@file.content} />
       <.content content={@file.content} />
     <% end %>
     """

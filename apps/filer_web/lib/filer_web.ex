@@ -87,6 +87,7 @@ defmodule FilerWeb do
       use PetalComponents
       # Core UI components and translation
       import FilerWeb.CoreComponents
+      import FilerWeb.LiveComponents
       import FilerWeb.Gettext
 
       # Shortcut for generating JS commands

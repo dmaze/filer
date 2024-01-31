@@ -1,5 +1,4 @@
 defmodule FilerWeb.LabelsLive do
-  alias FilerWeb.EditCategoryComponent
   use FilerWeb, :live_view
   import Ecto.Query, only: [from: 2]
   alias Filer.Labels.Category
@@ -13,12 +12,7 @@ defmodule FilerWeb.LabelsLive do
       <.category_list categories={@categories} />
       <div>
         <%= if @live_action == :new_category || @live_action == :edit_category do %>
-          <.live_component
-            module={EditCategoryComponent}
-            id={@category.id || ""}
-            category={@category}
-            on_change={&send(self(), {:changed_category, &1})}
-          />
+          <.edit_category category={@category} on_change={&send(self(), {:changed_category, &1})} />
         <% else %>
           <div :if={@category.id} class="flex gap-2">
             <.h4 class="grow"><%= @category.name %></.h4>
