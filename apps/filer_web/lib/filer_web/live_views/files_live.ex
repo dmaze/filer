@@ -1,4 +1,5 @@
 defmodule FilerWeb.FilesLive do
+  alias FilerWeb.ContentLabelsComponent
   use FilerWeb, :live_view
   import Ecto.Query, only: [from: 2]
 
@@ -9,7 +10,9 @@ defmodule FilerWeb.FilesLive do
     ~H"""
     <div class="flex max-w-full">
       <div class="p-2 max-w-96 w-1/4 border rounded-md"><.listing files={@files} /></div>
-      <div class="p-2 grow"><.details file={@file} /></div>
+      <div class="p-2 grow">
+        <.details file={@file} live_action={@live_action} />
+      </div>
     </div>
     """
   end
@@ -46,13 +49,29 @@ defmodule FilerWeb.FilesLive do
   end
 
   attr :file, Filer.Files.File, default: nil
+  attr :live_action, :atom, required: true
 
   def details(assigns) do
     ~H"""
     <%= if @file == nil do %>
       <div>No file selected</div>
     <% else %>
-      <div class="truncate"><%= @file.path %></div>
+      <div class="flex">
+        <div class="truncate grow"><%= @file.path %></div>
+        <.button
+          label="Labels"
+          icon={:tag}
+          link_type="live_patch"
+          to={if @live_action == :labels, do: ~p"/files/#{@file}", else: ~p"/files/#{@file}/labels"}
+          variant={if @live_action == :labels, do: "inverted", else: nil}
+        />
+      </div>
+      <.live_component
+        :if={@live_action == :labels}
+        module={ContentLabelsComponent}
+        id="labels"
+        content={@file.content}
+      />
       <.content content={@file.content} />
     <% end %>
     """
@@ -84,17 +103,11 @@ defmodule FilerWeb.FilesLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    maybe_f =
-      with {:ok, id_string} <- Map.fetch(params, "id"),
-           {id, ""} <- Integer.parse(id_string),
-           f when is_struct(f) <-
-             Filer.Repo.get(Filer.Files.File |> Ecto.Query.preload(:content), id) do
-        {:ok, f}
-      end
-
     socket =
-      case maybe_f do
-        {:ok, f} -> socket |> assign(:file, f) |> assign(:page_title, Path.basename(f.path))
+      with {:ok, id} <- Map.fetch(params, "id"),
+           f when not is_nil(f) <- Filer.Files.get_file(id) do
+        socket |> assign(:file, f) |> assign(:page_title, Path.basename(f.path))
+      else
         _ -> socket
       end
 

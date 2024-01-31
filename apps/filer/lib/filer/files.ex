@@ -10,6 +10,9 @@ defmodule Filer.Files do
   without their contents changing.
 
   """
+  alias Filer.Files.Content
+  alias Filer.Files.File, as: FFile
+  alias Filer.Repo
   import Ecto.Query, only: [from: 2]
 
   @doc """
@@ -23,7 +26,7 @@ defmodule Filer.Files do
   def observe_file(path, hash) do
     content_by_hash(hash)
     |> Ecto.build_assoc(:files, path: path)
-    |> Filer.Repo.insert!(
+    |> Repo.insert!(
       conflict_target: [:path],
       on_conflict: {:replace, [:content_id]}
     )
@@ -56,7 +59,7 @@ defmodule Filer.Files do
   @spec file_needs_update(Path.t()) :: :ok | {:update, String.t()} | {:error, File.posix()}
   def file_needs_update(path) do
     with {:ok, hash} <- file_hash(path) do
-      q = from f in Filer.Files.File, where: f.path == ^path, preload: :content
+      q = from f in FFile, where: f.path == ^path, preload: :content
 
       case Filer.Repo.one(q) do
         nil ->
@@ -74,7 +77,7 @@ defmodule Filer.Files do
   """
   @spec content_by_hash(String.t()) :: Filer.Files.Content.t()
   def content_by_hash(hash) do
-    Filer.Repo.insert!(%Filer.Files.Content{hash: hash},
+    Filer.Repo.insert!(%Content{hash: hash},
       on_conflict: {:replace, [:hash]},
       conflict_target: [:hash]
     )
@@ -102,5 +105,30 @@ defmodule Filer.Files do
     |> Stream.map(& &1.path)
     |> Stream.filter(&File.exists?/1)
     |> Enum.at(0)
+  end
+
+  @doc """
+  Retrieve a single file by ID.
+
+  If the ID is a string, parse it to an integer.  Then get the single
+  file object with that ID.  Returns `nil` if the ID does not exist or
+  if a string-format ID is not an integer.
+
+  The file's content and labels are preloaded.
+
+  """
+  @spec get_file(String.t() | integer()) :: File.t() | nil
+  def get_file(id)
+
+  def get_file(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {file_id, ""} -> get_file(file_id)
+      _ -> nil
+    end
+  end
+
+  def get_file(id) when is_integer(id) do
+    q = from f in FFile, preload: [content: :labels]
+    Repo.get(q, id)
   end
 end

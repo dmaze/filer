@@ -9,12 +9,16 @@ defmodule Filer.Files.Content do
   use Ecto.Schema
   import Ecto.Changeset
   alias Filer.Files.File
-  alias Filer.Labels.Label
+  alias Filer.Labels.{Label, Value}
 
   schema "contents" do
     field :hash, :string
     has_many :files, File
-    has_many :labels, Label
+
+    many_to_many :labels, Value,
+      join_through: Label,
+      on_replace: :delete,
+      preload_order: [asc: :value]
 
     timestamps()
   end

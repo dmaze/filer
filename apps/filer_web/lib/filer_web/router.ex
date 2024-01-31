@@ -18,8 +18,9 @@ defmodule FilerWeb.Router do
     pipe_through :browser
 
     get "/", PagesController, :index
-    live "/files", FilesLive
-    live "/files/:id", FilesLive
+    live "/files", FilesLive, :index
+    live "/files/:id", FilesLive, :show
+    live "/files/:id/labels", FilesLive, :labels
     get "/contents/:id/png", ContentsController, :png
     live "/labels", LabelsLive, :index
     live "/labels/new", LabelsLive, :new_category
