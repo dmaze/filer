@@ -16,7 +16,7 @@ defmodule FilerWeb.LabelsLive do
         <% else %>
           <div :if={@category.id} class="flex gap-2">
             <.h4 class="grow"><%= @category.name %></.h4>
-            <%= if is_nil(@changeset) do %>
+            <%= if @live_action == :category || @live_action == :value do %>
               <.button label="Delete" icon={:trash} phx-click="delete_category" />
               <.button
                 label="Edit"
@@ -34,12 +34,12 @@ defmodule FilerWeb.LabelsLive do
           </div>
         <% end %>
         <%= if not(is_nil(@category.id)) do %>
-          <%= if not(is_nil(@changeset)) and is_struct(@changeset.data, Value) do %>
-            <.value_form category={@category} changeset={@changeset} form={@form} />
+          <%= if @live_action == :new_value || @live_action == :edit_value do %>
+            <.edit_value value={@value} />
           <% else %>
             <div :if={@value} class="flex gap-2">
               <.h5 class="grow"><%= @value.value %></.h5>
-              <%= if is_nil(@changeset) do %>
+              <%= if @live_action == :value do %>
                 <.button label="Delete" icon={:trash} phx-click="delete_value" />
                 <.button
                   label="Edit"
@@ -99,35 +99,6 @@ defmodule FilerWeb.LabelsLive do
     """
   end
 
-  def value_form(assigns) do
-    ~H"""
-    <.form for={@form} phx-change="change_value" phx-submit="submit_value">
-      <.field field={@form[:value]} />
-      <div class="flex justify-end gap-3">
-        <%= if @changeset.data.id == nil do %>
-          <.button
-            type="button"
-            label="Cancel"
-            icon={:x_mark}
-            link_type="live_patch"
-            to={~p"/labels/#{@category}"}
-          />
-          <.button type="submit" label="Add" icon={:plus} />
-        <% else %>
-          <.button
-            type="button"
-            label="Cancel"
-            icon={:x_mark}
-            link_type="live_patch"
-            to={~p"/labels/#{@category}/values/#{@changeset.data}"}
-          />
-          <.button type="submit" label="Update" icon={:check} />
-        <% end %>
-      </div>
-    </.form>
-    """
-  end
-
   @impl true
   def mount(_params, _session, socket) do
     socket =
@@ -136,9 +107,7 @@ defmodule FilerWeb.LabelsLive do
         current_page: :labels,
         page_title: "Labels",
         category: nil,
-        value: nil,
-        changeset: nil,
-        form: nil
+        value: nil
       )
       |> load_categories()
 
@@ -167,23 +136,14 @@ defmodule FilerWeb.LabelsLive do
            %Value{} = v <- Filer.Repo.get(Value, id) do
         v
       else
-        _ -> nil
+        _ ->
+          case category.id do
+            nil -> nil
+            _ -> Ecto.build_assoc(category, :values)
+          end
       end
 
-    changeset =
-      case Map.get(socket.assigns, :live_action) do
-        :new_value -> Ecto.Changeset.change(Ecto.build_assoc(category, :values))
-        :edit_value -> Ecto.Changeset.change(value)
-        _ -> nil
-      end
-
-    form =
-      case changeset do
-        nil -> nil
-        _ -> to_form(changeset)
-      end
-
-    socket = assign(socket, category: category, value: value, changeset: changeset, form: form)
+    socket = assign(socket, category: category, value: value)
     {:noreply, socket}
   end
 
@@ -199,43 +159,6 @@ defmodule FilerWeb.LabelsLive do
 
         _ ->
           socket
-      end
-
-    {:noreply, socket}
-  end
-
-  def handle_event("change_value", %{"value" => params}, socket) do
-    form = socket.assigns.changeset |> Value.changeset(params) |> to_form()
-    {:noreply, assign(socket, :form, form)}
-  end
-
-  def handle_event("submit_value", %{"value" => params}, socket) do
-    Logger.info("submit_value #{inspect(params)}")
-    changeset = Value.changeset(socket.assigns.changeset, params)
-    Logger.info("changeset: #{inspect(changeset)}")
-
-    result =
-      case changeset.data.id do
-        nil ->
-          Logger.info("new value")
-          Filer.Repo.insert(changeset)
-
-        _ ->
-          Logger.info("existing value")
-          Filer.Repo.update(changeset)
-      end
-
-    socket =
-      case result do
-        {:ok, value} ->
-          Logger.info("inserted successfully #{inspect(value)}")
-
-          socket
-          |> push_patch(to: ~p"/labels/#{value.category_id}/values/#{value}")
-
-        {:error, changeset} ->
-          Logger.info("failed insert #{inspect(changeset)}")
-          assign(socket, form: to_form(changeset))
       end
 
     {:noreply, socket}
@@ -259,8 +182,6 @@ defmodule FilerWeb.LabelsLive do
   def handle_info(message, socket)
 
   def handle_info({:changed_category, _category}, socket) do
-    require Logger
-    Logger.info("changed_category message")
     socket = load_categories(socket)
     {:noreply, socket}
   end

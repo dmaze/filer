@@ -38,7 +38,7 @@ defmodule FilerWeb.LiveComponents do
       "Callback when the category successfully changes.  Function of a single category parameter."
 
   @doc """
-  Edit a category object and more specifically its title.
+  Edit a category object and more specifically its name.
 
   Presents as a new category if the specified category object does not have an ID, or an edit if it does.
 
@@ -57,6 +57,29 @@ defmodule FilerWeb.LiveComponents do
       category={@category}
       on_change={@on_change}
     />
+    """
+  end
+
+  attr :id, :string,
+    doc:
+      "Identifier for the component.  Must be unique across all instances of this component type.  Defaults to the value's ID."
+
+  attr :value, Filer.Labels.Value, required: true, doc: "Value object to edit."
+
+  @doc """
+  Edit a value object and more specifically its string value.
+
+  Presents as a new value if the specified value object does not have an ID, or an edit if it does.
+
+  """
+  @spec edit_value(Phoenix.LiveView.Socket.assigns()) :: Phoenix.LiveView.Rendered.t()
+  def edit_value(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:id, fn -> assigns.value.id || "" end)
+
+    ~H"""
+    <.live_component module={FilerWeb.EditValueComponent} id={@id} value={@value} />
     """
   end
 end
