@@ -41,6 +41,12 @@ defmodule Filer.MixProject do
       {:ecto_sql, "~> 3.6"},
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.2"},
+
+      # Related to machine learning.
+      {:nx, "~> 0.6"},
+      {:exla, "~> 0.6"},
+      {:stb_image, "~> 0.6"},
+
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
