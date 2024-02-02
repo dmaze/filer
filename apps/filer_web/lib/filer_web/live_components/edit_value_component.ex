@@ -16,7 +16,7 @@ defmodule FilerWeb.EditValueComponent do
   def render(assigns) do
     ~H"""
     <div>
-      <.form for={@form} phx-change="change" phx-submit="submit">
+      <.form for={@form} phx-change="change" phx-submit="submit" phx-target={@myself}>
         <.field field={@form[:value]} />
         <div class="flex justify-end gap-3">
           <%= if @value.id == nil do %>
@@ -69,7 +69,7 @@ defmodule FilerWeb.EditValueComponent do
     {:noreply, assign(socket, :form, form)}
   end
 
-  def handle_event("submit", %{"category" => params}, socket) do
+  def handle_event("submit", %{"value" => params}, socket) do
     changeset = Value.changeset(socket.assigns.value, params)
 
     result =

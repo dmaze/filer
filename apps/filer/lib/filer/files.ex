@@ -10,10 +10,11 @@ defmodule Filer.Files do
   without their contents changing.
 
   """
+  import Ecto.Query, only: [from: 2]
   alias Filer.Files.Content
   alias Filer.Files.File, as: FFile
+  import Filer.Helpers
   alias Filer.Repo
-  import Ecto.Query, only: [from: 2]
 
   @doc """
   Observe that a file exists.
@@ -108,6 +109,18 @@ defmodule Filer.Files do
   end
 
   @doc """
+  Get all of the files.
+
+  The files are in order by path.  Nothing is preloaded.
+
+  """
+  @spec list_files() :: list(FFile)
+  def list_files() do
+    q = from f in FFile, order_by: :path
+    Filer.Repo.all(q)
+  end
+
+  @doc """
   Retrieve a single file by ID.
 
   If the ID is a string, parse it to an integer.  Then get the single
@@ -118,17 +131,8 @@ defmodule Filer.Files do
 
   """
   @spec get_file(String.t() | integer()) :: File.t() | nil
-  def get_file(id)
-
-  def get_file(id) when is_binary(id) do
-    case Integer.parse(id) do
-      {file_id, ""} -> get_file(file_id)
-      _ -> nil
-    end
-  end
-
-  def get_file(id) when is_integer(id) do
+  def get_file(id) do
     q = from f in FFile, preload: [content: :labels]
-    Repo.get(q, id)
+    get_thing(id, q)
   end
 end

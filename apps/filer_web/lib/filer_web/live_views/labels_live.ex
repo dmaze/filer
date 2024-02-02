@@ -1,8 +1,7 @@
 defmodule FilerWeb.LabelsLive do
   use FilerWeb, :live_view
-  import Ecto.Query, only: [from: 2]
+  alias Filer.Labels
   alias Filer.Labels.Category
-  alias Filer.Labels.Value
   require Logger
 
   @impl true
@@ -115,34 +114,13 @@ defmodule FilerWeb.LabelsLive do
   end
 
   defp load_categories(socket) do
-    q = from(Filer.Labels.Category, order_by: :name)
-    assign(socket, :categories, Filer.Repo.all(q))
+    assign(socket, :categories, Labels.list_categories())
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    category =
-      with {:ok, id_string} <- Map.fetch(params, "id"),
-           {id, ""} <- Integer.parse(id_string),
-           %Category{} = c <- from(Category, preload: [:values]) |> Filer.Repo.get(id) do
-        c
-      else
-        _ -> %Category{}
-      end
-
-    value =
-      with {:ok, value_string} <- Map.fetch(params, "value"),
-           {id, ""} <- Integer.parse(value_string),
-           %Value{} = v <- Filer.Repo.get(Value, id) do
-        v
-      else
-        _ ->
-          case category.id do
-            nil -> nil
-            _ -> Ecto.build_assoc(category, :values)
-          end
-      end
-
+    category = Labels.get_category(Map.get(params, "id")) || Labels.new_category()
+    value = Labels.get_value(Map.get(params, "value")) || Labels.new_value(category)
     socket = assign(socket, category: category, value: value)
     {:noreply, socket}
   end
@@ -154,7 +132,7 @@ defmodule FilerWeb.LabelsLive do
     socket =
       case Map.fetch(socket.assigns, :category) do
         {:ok, category} ->
-          Filer.Repo.delete(category)
+          _ = Labels.delete_category(category)
           socket |> load_categories() |> push_patch(to: ~p"/labels")
 
         _ ->
@@ -171,8 +149,8 @@ defmodule FilerWeb.LabelsLive do
           socket
 
         value ->
-          Filer.Repo.delete(value)
-          push_patch(socket, to: ~p"/labels/#{value.category}")
+          _ = Labels.delete_value(value)
+          push_patch(socket, to: ~p"/labels/#{value.category_id}")
       end
 
     {:noreply, socket}

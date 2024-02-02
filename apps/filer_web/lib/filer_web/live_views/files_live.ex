@@ -1,6 +1,5 @@
 defmodule FilerWeb.FilesLive do
   use FilerWeb, :live_view
-  import Ecto.Query, only: [from: 2]
 
   ## HTML OUTPUT
 
@@ -83,13 +82,11 @@ defmodule FilerWeb.FilesLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    q = from(Filer.Files.File, order_by: :path)
-
     socket =
       socket
       |> assign(:current_page, :files)
       |> assign(:page_title, "Files")
-      |> assign(:files, Filer.Repo.all(q))
+      |> assign(:files, Filer.Files.list_files())
       |> assign(:file, nil)
 
     {:ok, socket}
