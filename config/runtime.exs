@@ -87,3 +87,4 @@ if config_env() == :prod do
 end
 
 config :filer_index, root_dir: "data"
+config :filer_store, directory: "store"

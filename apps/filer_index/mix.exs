@@ -27,6 +27,7 @@ defmodule FilerIndex.MixProject do
   defp deps do
     [
       {:filer, in_umbrella: true},
+      {:filer_store, in_umbrella: true},
       # phoenix_live_reload has a similar constraint
       {:file_system, "~> 0.2.8"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}

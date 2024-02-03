@@ -9,13 +9,14 @@ defmodule FilerIndex.Watcher do
   @type option() ::
           {:file_system, GenServer.server()}
           | {:task_supervisor, GenServer.server()}
+          | {:file_store, GenServer.server()}
           | {:root_dir, Path.t()}
   @typep state() :: [option()]
 
   @spec start_link([option() | GenServer.option()]) :: GenServer.on_start()
   def start_link(opts) do
     {watcher_opts, genserver_opts} =
-      Keyword.split(opts, [:file_system, :task_supervisor, :root_dir])
+      Keyword.split(opts, [:file_system, :task_supervisor, :file_store, :root_dir])
 
     GenServer.start_link(__MODULE__, watcher_opts, genserver_opts)
   end
@@ -34,7 +35,7 @@ defmodule FilerIndex.Watcher do
       files,
       FilerIndex.Observer,
       :observe,
-      [],
+      [opts[:file_store]],
       ordered: false
     )
     |> Stream.run()
@@ -49,7 +50,10 @@ defmodule FilerIndex.Watcher do
     Logger.info("Watcher: #{path} #{inspect(events)}")
 
     task =
-      Task.Supervisor.async_nolink(state[:task_supervisor], FilerIndex.Observer, :observe, [path])
+      Task.Supervisor.async_nolink(state[:task_supervisor], FilerIndex.Observer, :observe, [
+        path,
+        state[:file_store]
+      ])
 
     case Task.yield(task, 100) || Task.ignore(task) do
       {:ok, _reply} ->

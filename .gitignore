@@ -24,3 +24,6 @@ erl_crash.dump
 
 # PDF content (or a symlink thereto)
 /data
+
+# Local storage
+/store

@@ -19,8 +19,8 @@ defmodule FilerIndex.Observer do
   run in a dedicated task.
 
   """
-  @spec observe(Path.t()) :: nil
-  def observe(path) do
+  @spec observe(Path.t(), GenServer.server()) :: nil
+  def observe(path, file_store) do
     case Filer.Files.file_needs_update(path) do
       :ok ->
         Logger.info("#{path} is up to date")
@@ -33,6 +33,8 @@ defmodule FilerIndex.Observer do
 
       {:update, hash} ->
         Logger.info("updating #{path} (#{hash})")
+        content = File.read!(path)
+        FilerStore.put(file_store, {hash, :pdf}, content)
         Filer.Files.observe_file(path, hash)
         nil
     end

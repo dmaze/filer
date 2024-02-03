@@ -50,6 +50,7 @@ defmodule FilerWeb.MixProject do
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
       {:filer, in_umbrella: true},
+      {:filer_store, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:petal_components, "~> 1.0"},
