@@ -47,15 +47,27 @@ defmodule Filer.Render do
   end
 
   @doc """
-  Convert a PDF file to PNG.
+  Convert a PDF-format binary string to PNG.
 
   On success, returns the PNG content as a binary string.  If executing
   Ghostscript fails, returns its error code; if a `gs` binary can't be
   found on the system, returns `:not_found`.
 
+  This creates a temporary file that will be deleted at process exit.
+  If this is called somewhere other than a relatively short-lived process,
+  it is recommended to run it in a `Task`.
+
   """
-  @spec to_png(String.t(), [option()]) :: {:ok, binary()} | {:error, integer()} | :not_found
-  def to_png(path, opts \\ []) do
+  @spec to_png(binary(), [option()]) :: {:ok, binary()} | {:error, integer()} | :not_found
+  def to_png(content, opts \\ []) do
+    # We'd love to run `gs ... -` and pipe content to its stdin.
+    # There's a long-standing Erlang-level issue that you can't separately
+    # close a port's input and output, though: if you close the port, it sends
+    # EOF, but also stops accepting responses.  The canonical example is
+    # invoking wc(1) but it applies here too.
+    path = Briefly.create!(prefix: "filer", extname: "pdf")
+    File.write!(path, content)
+
     case gs_command(path, opts) do
       {:ok, command, args} ->
         case System.cmd(command, args) do

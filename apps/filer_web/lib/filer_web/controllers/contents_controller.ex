@@ -12,8 +12,11 @@ defmodule FilerWeb.ContentsController do
   def png(conn, %{"id" => id_string}) do
     with {id, ""} <- Integer.parse(id_string),
          c when is_struct(c) <- Filer.Repo.get(Filer.Files.Content, id),
-         path when is_binary(path) <- Filer.Files.any_file_for_content(c) do
-      case Filer.Render.to_png(path, resolution: 72) do
+         path when is_binary(path) <- Filer.Files.any_file_for_content(c),
+         {:ok, content} <- File.read(path) do
+      task = Task.async(Filer.Render, :to_png, [content, [resolution: 72]])
+
+      case Task.await(task) do
         {:ok, content} ->
           conn
           |> put_resp_content_type("image/png")
