@@ -4,7 +4,7 @@ import Config
 config :filer, Filer.Repo,
   username: "postgres",
   password: "passw0rd",
-  hostname: "192.168.64.3",
+  hostname: "192.168.64.4",
   database: "filer_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,

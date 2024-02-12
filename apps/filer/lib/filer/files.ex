@@ -135,4 +135,16 @@ defmodule Filer.Files do
     q = from f in FFile, preload: [content: :labels]
     get_thing(id, q)
   end
+
+  @doc """
+  Get all of the content objects.
+
+  The objects are in any order.  They have their files and labels preloaded.
+
+  """
+  @spec list_contents() :: [Content]
+  def list_contents() do
+    q = from c in Content, preload: [:files, :labels]
+    Repo.all(q)
+  end
 end

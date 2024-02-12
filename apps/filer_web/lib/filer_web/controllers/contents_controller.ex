@@ -12,18 +12,10 @@ defmodule FilerWeb.ContentsController do
   def png(conn, %{"id" => id_string}) do
     with {id, ""} <- Integer.parse(id_string),
          c when is_struct(c) <- Filer.Repo.get(Filer.Files.Content, id),
-         {:ok, content} <- FilerStore.get(FilerStore, {c.hash, :pdf}) do
-      task = Task.async(Filer.Render, :to_png, [content, [resolution: 72]])
-
-      case Task.await(task) do
-        {:ok, content} ->
-          conn
-          |> put_resp_content_type("image/png")
-          |> send_resp(:ok, content)
-
-        _ ->
-          send_resp(conn, :internal_server_error, "Internal Server Error")
-      end
+         {:ok, content} <- FilerStore.get(FilerStore, {c.hash, :png, :res72}) do
+      conn
+      |> put_resp_content_type("image/png")
+      |> send_resp(:ok, content)
     else
       _ -> send_resp(conn, :not_found, "Not Found")
     end
