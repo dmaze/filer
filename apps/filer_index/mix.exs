@@ -30,6 +30,9 @@ defmodule FilerIndex.MixProject do
       {:filer_store, in_umbrella: true},
       # phoenix_live_reload has a similar constraint
       {:file_system, "~> 0.2.8"},
+      {:nx, "~> 0.6.0"},
+      {:axon, "~> 0.6.0"},
+      {:stb_image, "~> 0.6.0"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end

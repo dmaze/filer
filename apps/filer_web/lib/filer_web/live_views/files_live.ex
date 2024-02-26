@@ -65,8 +65,27 @@ defmodule FilerWeb.FilesLive do
         />
       </div>
       <.content_labels :if={@live_action == :labels} content={@file.content} />
+      <.content_inferred content={@file.content} />
       <.content content={@file.content} />
     <% end %>
+    """
+  end
+
+  attr :content, Filer.Files.Content, required: true
+
+  def content_inferred(assigns) do
+    assigns =
+      assigns |> assign(:labels, FilerIndex.Trainer.score(FilerIndex.Trainer, assigns.content))
+
+    ~H"""
+    <div>
+      <b>Labels:</b>
+      <%= if @labels != [] do %>
+        <%= Enum.map_join(@labels, ", ", & &1.value) %>
+      <% else %>
+        (none)
+      <% end %>
+    </div>
     """
   end
 

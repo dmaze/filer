@@ -29,6 +29,7 @@ defmodule FilerWeb.Router do
     live "/labels/:id/values/new", LabelsLive, :new_value
     live "/labels/:id/values/:value", LabelsLive, :value
     live "/labels/:id/values/:value/edit", LabelsLive, :edit_value
+    live "/training", TrainingLive
   end
 
   # Other scopes may use custom stacks.
