@@ -9,6 +9,16 @@ defmodule FilerIndex.Ml do
   @fixed_width 17 * 36
   @fixed_height 11 * 72
 
+  @type t() :: %{value_ids: Nx.t(), model: Axon.t(), params: term()}
+
+  @doc """
+  Run the training task.
+
+  This takes a fairly long time, at least "minutes".  Run it in a Task or
+  another asynchronous container.
+
+  """
+  @spec train() :: t()
   def train() do
     contents = Filer.Files.list_labeled_contents()
 
@@ -76,6 +86,13 @@ defmodule FilerIndex.Ml do
     {:continue, state}
   end
 
+  @doc """
+  Score a single document.
+
+  Returns a list of inferred label values for the document.
+
+  """
+  @spec score(Filer.Files.Content.t(), t()) :: [Filer.Labels.Value.t()]
   def score(content, %{value_ids: value_ids, model: model, params: params}) do
     image = content_image(content)
     input = Nx.new_axis(image, 0, :document)
