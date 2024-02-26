@@ -21,9 +21,14 @@ defmodule FilerIndex.Ml do
   # Fixed image size; 8.5x11 @ 72 dpi.
   @fixed_width 17 * 36
   @fixed_height 11 * 72
+  @batch_size 4
 
   @type t() :: %{value_ids: Nx.t(), model: Axon.t(), params: term()}
-  @type pubsub() :: :trainer_start | :trainer_complete | {:trainer_failed, term()} | {:trainer_state, Axon.Loop.State.t()}
+  @type pubsub() ::
+          :trainer_start
+          | :trainer_complete
+          | {:trainer_failed, term()}
+          | {:trainer_state, Axon.Loop.State.t()}
 
   @doc """
   Run the training task.
@@ -36,11 +41,9 @@ defmodule FilerIndex.Ml do
   def train() do
     :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_start)
 
+    # Get all of the manually-labeled content objects.  (This can't be that
+    # many of them, and this doesn't include the underlying image data.)
     contents = Filer.Files.list_labeled_contents()
-
-    # Retrieve and lightly preprocess the underlying images.
-    # Shape of [document: n, height: 792, width: 612, channel: 3].
-    images = contents |> Enum.map(&content_image/1) |> Nx.stack(name: :document)
 
     # Get a tensor of all of the value IDs.
     value_ids =
@@ -53,19 +56,12 @@ defmodule FilerIndex.Ml do
 
     {label_count} = Nx.shape(value_ids)
 
-    # Get a tensor where there is a row per document, and there is a column
-    # per label, matching the value_ids.  This is almost a one-hot encoding,
-    # except we allow a document to have multiple labels.
-    label_vector = fn content ->
-      Enum.map(content.labels, & &1.id)
-      |> Nx.tensor()
-      |> Nx.new_axis(0)
-      |> Nx.equal(value_ids)
-      |> Nx.sum(axes: [0])
-    end
+    datas =
+      contents
+      |> Stream.chunk_every(@batch_size, @batch_size, :discard)
+      |> Stream.map(&batch_data(&1, value_ids))
 
-    # Shape of [document: n, label: w].
-    label_matrix = contents |> Enum.map(label_vector) |> Nx.stack(name: :document)
+    batches = div(length(contents), @batch_size)
 
     # Build the Axon model we're going to train.
     model =
@@ -89,17 +85,44 @@ defmodule FilerIndex.Ml do
       |> Axon.Loop.metric(:precision)
       |> Axon.Loop.metric(:recall)
       |> Axon.Loop.handle_event(:iteration_completed, &on_iteration_completed/1)
-      |> Axon.Loop.run([{images, label_matrix}], %{}, epochs: 20)
+      |> Axon.Loop.run(datas, %{}, epochs: 20, iterations: batches)
 
     :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_complete)
     %{value_ids: value_ids, model: model, params: params}
+  end
+
+  # Produce data for a batch of contents.
+  # Returns a pair of tensors for the input data and expected output.
+  @spec batch_data([Filer.Files.Content.t()], Nx.t()) :: {Nx.t(), Nx.t()}
+  defp batch_data(contents, value_ids) do
+    # Retrieve and lightly preprocess the underlying images.
+    # Shape of [document: n, height: 792, width: 612, channel: 3].
+    images = contents |> Enum.map(&content_image/1) |> Nx.stack(name: :document)
+
+    # Get a tensor where there is a row per document, and there is a column
+    # per label, matching the value_ids.  This is almost a one-hot encoding,
+    # except we allow a document to have multiple labels.
+    label_vector = fn content ->
+      Enum.map(content.labels, & &1.id)
+      |> Nx.tensor()
+      |> Nx.new_axis(0)
+      |> Nx.equal(value_ids)
+      |> Nx.sum(axes: [0])
+    end
+
+    # Shape of [document: n, label: w].
+    label_matrix = contents |> Enum.map(label_vector) |> Nx.stack(name: :document)
+
+    {images, label_matrix}
   end
 
   defp on_iteration_completed(state) do
     :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", {:trainer_state, state})
     metrics = Enum.map_join(state.metrics, ", ", fn {k, v} -> "#{k}: #{Nx.to_number(v)}" end)
 
-    IO.puts("Epoch #{state.epoch}/#{state.max_epoch}: #{metrics}")
+    IO.puts(
+      "Epoch #{state.epoch}/#{state.max_epoch}, iteration #{state.iteration}/#{state.max_iteration}: #{metrics}"
+    )
 
     {:continue, state}
   end

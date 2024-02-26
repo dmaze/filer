@@ -152,13 +152,12 @@ defmodule Filer.Files do
   Get all of the labeled content objects.
 
   The objects are in any order.  The returned objects all have at least one
-  label.  The labels are preloaded.  Files are also preloaded for diagnostic
-  purposes.
+  label.  The labels are preloaded.
 
   """
   @spec list_labeled_contents() :: [Content]
   def list_labeled_contents() do
-    q = from c in Content, join: v in assoc(c, :labels), preload: [:files, :labels]
+    q = from c in Content, join: v in assoc(c, :labels), preload: [:labels]
     Repo.all(q)
   end
 end
