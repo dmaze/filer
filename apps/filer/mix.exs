@@ -42,13 +42,6 @@ defmodule Filer.MixProject do
       {:postgrex, ">= 0.0.0"},
       {:jason, "~> 1.2"},
       {:briefly, "~> 0.5.0"},
-
-      # Related to machine learning.
-      {:nx, "~> 0.6"},
-      {:exla, "~> 0.6"},
-      {:stb_image, "~> 0.6"},
-      {:axon, "~> 0.6"},
-
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end

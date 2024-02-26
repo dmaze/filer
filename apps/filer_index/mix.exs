@@ -28,10 +28,11 @@ defmodule FilerIndex.MixProject do
     [
       {:filer, in_umbrella: true},
       {:filer_store, in_umbrella: true},
-      # phoenix_live_reload has a similar constraint
-      {:file_system, "~> 0.2.8"},
-      {:nx, "~> 0.6.0"},
-      {:axon, "~> 0.6.0"},
+      {:file_system, ">= 0.2.8 and < 2.0.0"},
+      {:nx, ">= 0.6.0 and < 0.8.0"},
+      {:exla, ">= 0.6.0 and < 0.8.0"},
+      # axon 0.6.1 doesn't converge running training
+      {:axon, "0.6.0"},
       {:stb_image, "~> 0.6.0"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
