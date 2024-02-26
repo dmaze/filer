@@ -2,26 +2,42 @@ defmodule FilerIndex.Trainer do
   @moduledoc """
   Train ML models and keep a current model.
 
+  ### Trainer execution and state
+
+  This server ensures at most a single training task is running.  `train/1`
+  starts a task, if one is not yet running already; `training?/1` tells if
+  it is running or not.
+
+  The trainer keeps some running state.  `trainer_state/1` returns the most
+  recent known version of the state.
+
+  If you want to monitor the live state of the trainer, use `Phoenix.PubSub`
+  to subscribe to the `"trainer"` topic.  This sends messages of type
+  `t:FilerIndex.Ml.pubsub/0`.  This server keeps only the most recent state,
+  and subscribing to pubsub messages will be more efficient than polling.
+
   """
   use GenServer
   require Logger
 
-  @type option() :: {:task_supervisor, GenServer.server()}
+  @type option() :: {:pubsub, Phoenix.PubSub.t(), :task_supervisor, GenServer.server()}
   @typep state() :: %{
-          ml: FilerIndex.Ml.t() | nil,
-          training_task: reference() | nil,
-          task_supervisor: GenServer.server()
-        }
+           ml: FilerIndex.Ml.t() | nil,
+           training_task: reference() | nil,
+           trainer_state: Axon.Loop.State.t() | nil,
+           pubsub: Phoenix.PubSub.t(),
+           task_supervisor: GenServer.server()
+         }
 
   @doc """
   Start the trainer as a supervised process.
 
-  Must pass `task_supervisor` as a keyword argument.
+  Must pass `:pubsub` and `:task_supervisor` as keyword arguments.
 
   """
   @spec start_link([option() | GenServer.option()]) :: GenServer.on_start()
   def start_link(opts) do
-    {trainer_opts, genserver_opts} = Keyword.split(opts, [:task_supervisor])
+    {trainer_opts, genserver_opts} = Keyword.split(opts, [:pubsub, :task_supervisor])
     GenServer.start_link(__MODULE__, trainer_opts, genserver_opts)
   end
 
@@ -47,6 +63,18 @@ defmodule FilerIndex.Trainer do
   end
 
   @doc """
+  Get the most recent trainer state.
+
+  Could be `nil` if training has never run, or if no state is yet available on an
+  initial run.
+
+  """
+  @spec trainer_state(GenServer.server()) :: Axon.Loop.State.t() | nil
+  def trainer_state(trainer) do
+    GenServer.call(trainer, :trainer_state)
+  end
+
+  @doc """
   Score some unit of content.
 
   Returns a set of values from the most recently completed training run.
@@ -61,7 +89,15 @@ defmodule FilerIndex.Trainer do
   @impl true
   @spec init([option()]) :: {:ok, state()}
   def init(opts) do
-    state = %{ml: nil, training_task: nil, task_supervisor: opts[:task_supervisor]}
+    state = %{
+      ml: nil,
+      training_task: nil,
+      trainer_state: nil,
+      pubsub: opts[:pubsub],
+      task_supervisor: opts[:task_supervisor]
+    }
+
+    :ok = Phoenix.PubSub.subscribe(state.pubsub, "trainer")
     {:ok, state}
   end
 
@@ -84,6 +120,10 @@ defmodule FilerIndex.Trainer do
     {:reply, training_task != nil, state}
   end
 
+  def handle_call(:trainer_state, _, state) do
+    {:reply, state.trainer_state, state}
+  end
+
   def handle_call({:score, _}, _, %{ml: nil} = state) do
     {:reply, [], state}
   end
@@ -103,9 +143,22 @@ defmodule FilerIndex.Trainer do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, reason}, %{training_task: ref} = state) do
+  def handle_info(
+        {:DOWN, ref, :process, _pid, reason},
+        %{training_task: ref, pubsub: pubsub} = state
+      ) do
     Logger.error("Training task failed: #{inspect(reason)}")
+    :ok = Phoenix.PubSub.broadcast(pubsub, "trainer", {:trainer_failed, reason})
     state = %{state | training_task: nil}
+    {:noreply, state}
+  end
+
+  def handle_info(:trainer_start, state), do: {:noreply, state}
+  def handle_info(:trainer_complete, state), do: {:noreply, state}
+  def handle_info({:trainer_failed, _}, state), do: {:noreply, state}
+
+  def handle_info({:trainer_state, trainer_state}, state) do
+    state = %{state | trainer_state: trainer_state}
     {:noreply, state}
   end
 end

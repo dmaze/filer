@@ -2,6 +2,19 @@ defmodule FilerIndex.Ml do
   @moduledoc """
   Train and run a ML model.
 
+  ### Publish/Subscribe
+
+  As execution progresses, the training sequence will use `Phoenix.PubSub` to
+  publish events.  These events are described in `t:pubsub/0`.  Events are
+  always published on the topic `"trainer"`.
+
+  A copy of the most-recent state will be stored in `FilerIndex.Trainer` as
+  well.
+
+  If the training sequence fails for whatever reason, this may not broadcast
+  the `:trainer_complete` event.  If this is run via `FilerIndex.Trainer`,
+  that will observe the failure and broadcast a `:trainer_failed` event.
+
   """
   import Nx.Defn
 
@@ -10,6 +23,7 @@ defmodule FilerIndex.Ml do
   @fixed_height 11 * 72
 
   @type t() :: %{value_ids: Nx.t(), model: Axon.t(), params: term()}
+  @type pubsub() :: :trainer_start | :trainer_complete | {:trainer_failed, term()} | {:trainer_state, Axon.Loop.State.t()}
 
   @doc """
   Run the training task.
@@ -20,6 +34,8 @@ defmodule FilerIndex.Ml do
   """
   @spec train() :: t()
   def train() do
+    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_start)
+
     contents = Filer.Files.list_labeled_contents()
 
     # Retrieve and lightly preprocess the underlying images.
@@ -72,13 +88,15 @@ defmodule FilerIndex.Ml do
       |> Axon.Loop.metric(:accuracy)
       |> Axon.Loop.metric(:precision)
       |> Axon.Loop.metric(:recall)
-      |> Axon.Loop.handle_event(:epoch_completed, &on_epoch_completed/1)
+      |> Axon.Loop.handle_event(:iteration_completed, &on_iteration_completed/1)
       |> Axon.Loop.run([{images, label_matrix}], %{}, epochs: 20)
 
+    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_complete)
     %{value_ids: value_ids, model: model, params: params}
   end
 
-  defp on_epoch_completed(state) do
+  defp on_iteration_completed(state) do
+    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", {:trainer_state, state})
     metrics = Enum.map_join(state.metrics, ", ", fn {k, v} -> "#{k}: #{Nx.to_number(v)}" end)
 
     IO.puts("Epoch #{state.epoch}/#{state.max_epoch}: #{metrics}")
