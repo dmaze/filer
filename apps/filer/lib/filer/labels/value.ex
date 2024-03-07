@@ -2,13 +2,13 @@ defmodule Filer.Labels.Value do
   use Ecto.Schema
   import Ecto.Changeset
   alias Filer.Files.Content
-  alias Filer.Labels.Category
-  alias Filer.Labels.Label
+  alias Filer.Labels.{Category, Inference, Label}
 
   schema "values" do
     field :value, :string
     belongs_to :category, Category
     many_to_many :labelled, Content, join_through: Label, on_replace: :delete
+    many_to_many :inferred, Content, join_through: Inference, on_replace: :delete
 
     timestamps()
   end

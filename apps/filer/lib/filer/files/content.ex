@@ -9,7 +9,7 @@ defmodule Filer.Files.Content do
   use Ecto.Schema
   import Ecto.Changeset
   alias Filer.Files.File
-  alias Filer.Labels.{Label, Value}
+  alias Filer.Labels.{Inference, Label, Value}
 
   schema "contents" do
     field :hash, :string
@@ -17,6 +17,11 @@ defmodule Filer.Files.Content do
 
     many_to_many :labels, Value,
       join_through: Label,
+      on_replace: :delete,
+      preload_order: [asc: :value]
+
+    many_to_many :inferences, Value,
+      join_through: Inference,
       on_replace: :delete,
       preload_order: [asc: :value]
 

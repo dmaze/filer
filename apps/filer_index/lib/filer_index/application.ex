@@ -18,9 +18,13 @@ defmodule FilerIndex.Application do
        file_store: FilerStore,
        root_dir: root_dir,
        name: FilterIndex.Watcher},
-      {FilerIndex.Worker, task_supervisor: FilerIndex.TaskSupervisor, filer_store: FilerStore},
       {FilerIndex.Trainer,
-       pubsub: Filer.PubSub, task_supervisor: FilerIndex.TaskSupervisor, name: FilerIndex.Trainer}
+       pubsub: Filer.PubSub, task_supervisor: FilerIndex.TaskSupervisor, name: FilerIndex.Trainer},
+      {FilerIndex.Worker,
+       filer_store: FilerStore,
+       ml: FilerIndex.Trainer,
+       pubsub: Filer.PubSub,
+       task_supervisor: FilerIndex.TaskSupervisor}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: FilerIndex.Supervisor)

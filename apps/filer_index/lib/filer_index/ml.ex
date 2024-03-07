@@ -85,7 +85,7 @@ defmodule FilerIndex.Ml do
       |> Axon.Loop.metric(:precision)
       |> Axon.Loop.metric(:recall)
       |> Axon.Loop.handle_event(:iteration_completed, &on_iteration_completed/1)
-      |> Axon.Loop.run(datas, %{}, epochs: 20, iterations: batches)
+      |> Axon.Loop.run(datas, %{}, epochs: 12, iterations: batches)
 
     :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_complete)
     %{value_ids: value_ids, model: model, params: params}

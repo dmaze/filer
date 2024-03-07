@@ -127,24 +127,25 @@ defmodule Filer.Files do
   file object with that ID.  Returns `nil` if the ID does not exist or
   if a string-format ID is not an integer.
 
-  The file's content and labels are preloaded.
+  The file's content and its associated labels and inferences are preloaded.
 
   """
   @spec get_file(String.t() | integer()) :: File.t() | nil
   def get_file(id) do
-    q = from f in FFile, preload: [content: :labels]
+    q = from f in FFile, preload: [content: [:labels, :inferences]]
     get_thing(id, q)
   end
 
   @doc """
   Get all of the content objects.
 
-  The objects are in any order.  They have their files and labels preloaded.
+  The objects are in any order.  They have their files, inferences, and
+  labels preloaded.
 
   """
   @spec list_contents() :: [Content]
   def list_contents() do
-    q = from c in Content, preload: [:files, :labels]
+    q = from c in Content, preload: [:files, :inferences, :labels]
     Repo.all(q)
   end
 
