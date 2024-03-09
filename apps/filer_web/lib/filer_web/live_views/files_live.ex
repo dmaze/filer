@@ -6,9 +6,9 @@ defmodule FilerWeb.FilesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex max-w-full">
-      <div class="p-2 max-w-96 w-1/4 border rounded-md"><.listing files={@files} /></div>
-      <div class="p-2 grow">
+    <div class="flex max-w-full h-full">
+      <div class="p-2 max-w-96 w-1/4 h-full"><.listing files={@files} /></div>
+      <div class="p-2 grow h-full">
         <.details file={@file} live_action={@live_action} />
       </div>
     </div>
@@ -19,7 +19,7 @@ defmodule FilerWeb.FilesLive do
 
   def listing(assigns) do
     ~H"""
-    <ul role="list">
+    <ul role="list" class="border rounded-md overflow-y-scroll h-full p-2">
       <.entry :for={f <- @files} file={f} />
     </ul>
     """
