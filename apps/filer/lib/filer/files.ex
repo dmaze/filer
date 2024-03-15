@@ -13,6 +13,7 @@ defmodule Filer.Files do
   import Ecto.Query, only: [from: 2]
   alias Filer.Files.Content
   alias Filer.Files.File, as: FFile
+  alias Filer.Labels.{Inference, Value}
   import Filer.Helpers
   alias Filer.Repo
 
@@ -109,15 +110,77 @@ defmodule Filer.Files do
   end
 
   @doc """
-  Get all of the files.
+  Get many or all of the files.
 
-  The files are in order by path.  Nothing is preloaded.
+  The files are in order by path.  The contents and their associated
+  inferred values are preloaded.
+
+  The set of files can be filtered by passing additional keyword options:
+
+  `:inferred_values` provides a list of `Value` objects, and files' contents
+  must have all of the specified values assigned from inference.  If an empty
+  list is provided, then there is no filtering on specific values.
+
+  `:no_inferred_categories` provides a list of `Category` objects, and files'
+  contents must not have any value in the specified categories assigned from
+  inference.  If an empty list is provided, then there is no filtering on
+  missing categories.
 
   """
-  @spec list_files() :: list(FFile)
-  def list_files() do
-    q = from f in FFile, order_by: :path
-    Filer.Repo.all(q)
+  @spec list_files([{:inferred_values, [Value.t()]} | {:no_inferred_categories, [Category.t()]}]) ::
+          list(FFile)
+  def list_files(opts \\ []) do
+    import Ecto.Query, only: [dynamic: 2, from: 2]
+
+    has_values =
+      opts
+      |> Keyword.get(:inferred_values, [])
+      |> Enum.map(& &1.id)
+      |> case do
+        [] ->
+          true
+
+        value_ids ->
+          dynamic(
+            [content: c],
+            exists(
+              from i in Inference,
+                where: i.content_id == parent_as(:content).id and i.value_id in ^value_ids,
+                select: 1
+            )
+          )
+      end
+
+    has_categories =
+      opts
+      |> Keyword.get(:no_inferred_categories, [])
+      |> Enum.map(& &1.id)
+      |> case do
+        [] ->
+          true
+
+        category_ids ->
+          dynamic(
+            [content: c],
+            not exists(
+              from i in Inference,
+                join: v in assoc(i, :value),
+                where: i.content_id == parent_as(:content).id and v.category_id in ^category_ids
+            )
+          )
+      end
+
+    query =
+      from f in FFile,
+        as: :file,
+        join: c in assoc(f, :content),
+        as: :content,
+        where: ^has_values,
+        where: ^has_categories,
+        preload: [content: c],
+        order_by: [asc: f.path]
+
+    Filer.Repo.all(query)
   end
 
   @doc """

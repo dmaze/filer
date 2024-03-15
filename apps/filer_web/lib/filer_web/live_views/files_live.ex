@@ -19,9 +19,14 @@ defmodule FilerWeb.FilesLive do
 
   def listing(assigns) do
     ~H"""
-    <ul role="list" class="border rounded-md overflow-y-scroll h-full p-2">
-      <.entry :for={f <- @files} file={f} />
-    </ul>
+    <div class="h-full flex flex-col">
+      <div class="flex-none">
+        <.choose_labels on_change={&send(self(), {:filter, &1})} />
+      </div>
+      <ul role="list" class="border rounded-md overflow-y-scroll flex-auto p-2">
+        <.entry :for={f <- @files} file={f} />
+      </ul>
+    </div>
     """
   end
 
@@ -99,11 +104,8 @@ defmodule FilerWeb.FilesLive do
   @impl true
   def mount(_params, _session, socket) do
     socket =
-      socket
-      |> assign(:current_page, :files)
-      |> assign(:page_title, "Files")
-      |> assign(:files, Filer.Files.list_files())
-      |> assign(:file, nil)
+      assign(socket, current_page: :files, page_title: "Files", file: nil, filter: %{})
+      |> load_files()
 
     {:ok, socket}
   end
@@ -119,5 +121,39 @@ defmodule FilerWeb.FilesLive do
       end
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:filter, labels}, socket) do
+    socket = socket |> assign(:filter, labels) |> load_files()
+    {:noreply, socket}
+  end
+
+  defp load_files(socket) do
+    filter = socket.assigns.filter
+
+    inferred_values =
+      Enum.flat_map(filter, fn {_, v} ->
+        case v do
+          {:value, value} -> [value]
+          _ -> []
+        end
+      end)
+
+    no_inferred_categories =
+      Enum.flat_map(filter, fn {k, v} ->
+        case v do
+          :none -> [k]
+          _ -> []
+        end
+      end)
+
+    files =
+      Filer.Files.list_files(
+        inferred_values: inferred_values,
+        no_inferred_categories: no_inferred_categories
+      )
+
+    assign(socket, :files, files)
   end
 end

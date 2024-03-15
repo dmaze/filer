@@ -10,6 +10,25 @@ defmodule FilerWeb.LiveComponents do
   use Phoenix.Component
 
   attr :id, :string,
+    default: "choose-labels",
+    doc:
+      "Identifier for the component, must be unique across all instances of this component type"
+
+  attr :on_change, :any, required: true, doc: "Callback when the label selection changes"
+
+  @doc """
+    Choose an arbitrary set of labels.
+
+    Intended for use as a filter.
+
+  """
+  def choose_labels(assigns) do
+    ~H"""
+    <.live_component module={FilerWeb.ChooseLabelsComponent} id={@id} on_change={@on_change} />
+    """
+  end
+
+  attr :id, :string,
     default: "labels",
     doc:
       "Identifier for the component, must be unique across all instances of this component type"
