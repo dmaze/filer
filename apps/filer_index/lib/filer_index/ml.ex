@@ -102,12 +102,13 @@ defmodule FilerIndex.Ml do
     # Get a tensor where there is a row per document, and there is a column
     # per label, matching the value_ids.  This is almost a one-hot encoding,
     # except we allow a document to have multiple labels.
+    value_ids = Nx.vectorize(value_ids, :value)
     label_vector = fn content ->
       Enum.map(content.labels, & &1.id)
       |> Nx.tensor()
-      |> Nx.new_axis(0)
       |> Nx.equal(value_ids)
-      |> Nx.sum(axes: [0])
+      |> Nx.sum()
+      |> Nx.devectorize()
     end
 
     # Shape of [document: n, label: w].
