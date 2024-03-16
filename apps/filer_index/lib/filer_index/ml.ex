@@ -71,6 +71,7 @@ defmodule FilerIndex.Ml do
       |> Axon.conv(32, kernel_size: {4, 4}, activation: :gelu)
       |> Axon.max_pool(kernel_size: {4, 4})
       |> Axon.flatten()
+      |> Axon.dropout(rate: 0.5)
       |> Axon.dense(label_count, activation: :sigmoid)
 
     # Train it
