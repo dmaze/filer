@@ -7,17 +7,13 @@ There are two main goals of this:
 1. Do automatic binary classification to match a PDF to a limited-cardinality set of tags (probably easy);
 2. Automatically extract metadata like dates and amounts in context (probably hard).
 
-As of this writing this is in a very early state, and it's unlikely to progress to anything near production-quality.
+As of this writing this is in a usable state for the binary-classification problem, and it's unlikely to progress to anything near production-quality.
 
 ## Developer Setup
 
-Edit `config/runtime.exs`.  In the setting
+In this directory, create an empty directory named `store` to hold binary artifacts, like prerendered PNG files.
 
-```elixir
-config :filer_index, root_dir: "..."
-```
-
-put the root of the directory tree that contains the PDF files.
+Also in this directory, create a symbolic link named `data` to the root of the directory tree that contains the PDF files.  An alternate path can be configured in `config/runtime.exs`.
 
 Start a PostgreSQL database.  In `config/dev.exs`, change the `config :filer, Filer.Repo` settings to have the database credentials.
 
