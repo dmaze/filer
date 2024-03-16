@@ -5,6 +5,8 @@ defmodule FilerIndex.Application do
   @impl true
   def start(_type, _args) do
     root_dir = Application.fetch_env!(:filer_index, :root_dir)
+    oban_config = Application.fetch_env!(:filer_index, Oban)
+    :ok = Oban.Telemetry.attach_default_logger()
 
     children = [
       {Task.Supervisor, name: FilerIndex.TaskSupervisor},
@@ -20,11 +22,7 @@ defmodule FilerIndex.Application do
        name: FilterIndex.Watcher},
       {FilerIndex.Trainer,
        pubsub: Filer.PubSub, task_supervisor: FilerIndex.TaskSupervisor, name: FilerIndex.Trainer},
-      {FilerIndex.Worker,
-       filer_store: FilerStore,
-       ml: FilerIndex.Trainer,
-       pubsub: Filer.PubSub,
-       task_supervisor: FilerIndex.TaskSupervisor}
+      {Oban, oban_config}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: FilerIndex.Supervisor)

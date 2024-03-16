@@ -17,6 +17,17 @@ config :filer_web,
   ecto_repos: [Filer.Repo],
   generators: [context_app: :filer]
 
+# Configure the job queue
+config :filer_index, Oban,
+  repo: Filer.Repo,
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 1800},
+    Oban.Plugins.Reindexer,
+    FilerIndex.Plugins.Prerender,
+    FilerIndex.Plugins.Score
+  ],
+  queues: [render: 1, score: 1]
+
 # Configures the endpoint
 config :filer_web, FilerWeb.Endpoint,
   url: [host: "localhost"],

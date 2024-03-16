@@ -76,6 +76,8 @@ defmodule Filer.Files do
   @doc """
   Given a file hash, get or create a content object for it.
 
+  If this returns an existing object, nothing is preloaded.
+
   """
   @spec content_by_hash(String.t()) :: Filer.Files.Content.t()
   def content_by_hash(hash) do
@@ -210,6 +212,28 @@ defmodule Filer.Files do
   def list_contents() do
     q = from c in Content, preload: [:files, :inferences, :labels]
     Repo.all(q)
+  end
+
+  @doc """
+  Get all of the content IDs.
+
+  None of the other information is provided, just the IDs.  The IDs are
+  not in any specific order.
+
+  """
+  def list_content_ids() do
+    Repo.all(from c in Content, select: c.id)
+  end
+
+  @doc """
+  Get all of the content hashes.
+
+  None of the other information is provided, just the hashes.  The hashes
+  are not in any specific order.
+
+  """
+  def list_content_hashes() do
+    Repo.all(from c in Content, select: c.hash)
   end
 
   @doc """
