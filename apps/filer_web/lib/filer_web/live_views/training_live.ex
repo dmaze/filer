@@ -78,7 +78,7 @@ defmodule FilerWeb.TrainingLive do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
-      :ok = Phoenix.PubSub.subscribe(Filer.PubSub, "trainer")
+      :ok = Filer.PubSub.subscribe_trainer()
     end
 
     socket =

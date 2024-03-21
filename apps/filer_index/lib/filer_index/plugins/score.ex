@@ -20,7 +20,7 @@ defmodule FilerIndex.Plugins.Score do
 
   @impl GenServer
   def init(_opts) do
-    :ok = Phoenix.PubSub.subscribe(Filer.PubSub, "trainer")
+    :ok = Filer.PubSub.subscribe_trainer()
     {:ok, nil}
   end
 

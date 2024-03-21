@@ -11,10 +11,10 @@ defmodule FilerIndex.Trainer do
   The trainer keeps some running state.  `trainer_state/1` returns the most
   recent known version of the state.
 
-  If you want to monitor the live state of the trainer, use `Phoenix.PubSub`
-  to subscribe to the `"trainer"` topic.  This sends messages of type
-  `t:FilerIndex.Ml.pubsub/0`.  This server keeps only the most recent state,
-  and subscribing to pubsub messages will be more efficient than polling.
+  If you want to monitor the live state of the trainer, use
+  `Filer.PubSub.subscribe_trainer/0` to subscribe to events.  This server
+  keeps only the most recent state, and subscribing to pubsub messages will
+  be more efficient than polling.
 
   """
   use GenServer
@@ -97,7 +97,7 @@ defmodule FilerIndex.Trainer do
       task_supervisor: opts[:task_supervisor]
     }
 
-    :ok = Phoenix.PubSub.subscribe(state.pubsub, "trainer")
+    :ok = Filer.PubSub.subscribe_trainer(state.pubsub)
     {:ok, state}
   end
 
@@ -148,7 +148,7 @@ defmodule FilerIndex.Trainer do
         %{training_task: ref, pubsub: pubsub} = state
       ) do
     Logger.error("Training task failed: #{inspect(reason)}")
-    :ok = Phoenix.PubSub.broadcast(pubsub, "trainer", {:trainer_failed, reason})
+    :ok = Filer.PubSub.broadcast_trainer_failed(pubsub, reason)
     state = %{state | training_task: nil}
     {:noreply, state}
   end

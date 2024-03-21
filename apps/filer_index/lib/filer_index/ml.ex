@@ -4,7 +4,7 @@ defmodule FilerIndex.Ml do
 
   ### Publish/Subscribe
 
-  As execution progresses, the training sequence will use `Phoenix.PubSub` to
+  As execution progresses, the training sequence will use `Filex.PubSub` to
   publish events.  These events are described in `t:pubsub/0`.  Events are
   always published on the topic `"trainer"`.
 
@@ -24,11 +24,6 @@ defmodule FilerIndex.Ml do
   @batch_size 4
 
   @type t() :: %{value_ids: Nx.t(), model: Axon.t(), params: term()}
-  @type pubsub() ::
-          :trainer_start
-          | :trainer_complete
-          | {:trainer_failed, term()}
-          | {:trainer_state, Axon.Loop.State.t()}
 
   @doc """
   Run the training task.
@@ -39,7 +34,7 @@ defmodule FilerIndex.Ml do
   """
   @spec train() :: t()
   def train() do
-    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_start)
+    :ok = Filer.PubSub.broadcast_trainer_start()
 
     # Get all of the manually-labeled content objects.  (This can't be that
     # many of them, and this doesn't include the underlying image data.)
@@ -88,7 +83,7 @@ defmodule FilerIndex.Ml do
       |> Axon.Loop.handle_event(:iteration_completed, &on_iteration_completed/1)
       |> Axon.Loop.run(datas, %{}, epochs: 12, iterations: batches)
 
-    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", :trainer_complete)
+    :ok = Filer.PubSub.broadcast_trainer_complete()
     %{value_ids: value_ids, model: model, params: params}
   end
 
@@ -119,7 +114,7 @@ defmodule FilerIndex.Ml do
   end
 
   defp on_iteration_completed(state) do
-    :ok = Phoenix.PubSub.broadcast(Filer.PubSub, "trainer", {:trainer_state, state})
+    :ok = Filer.PubSub.broadcast_trainer_state(state)
     metrics = Enum.map_join(state.metrics, ", ", fn {k, v} -> "#{k}: #{Nx.to_number(v)}" end)
 
     IO.puts(
