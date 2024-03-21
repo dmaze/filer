@@ -22,7 +22,7 @@ defmodule FilerIndex.Trainer do
 
   @type option() :: {:pubsub, Phoenix.PubSub.t(), :task_supervisor, GenServer.server()}
   @typep state() :: %{
-           ml: FilerIndex.Ml.t() | nil,
+           model: FilerIndex.Model.t() | nil,
            training_task: reference() | nil,
            trainer_state: Axon.Loop.State.t() | nil,
            pubsub: Phoenix.PubSub.t(),
@@ -90,7 +90,7 @@ defmodule FilerIndex.Trainer do
   @spec init([option()]) :: {:ok, state()}
   def init(opts) do
     state = %{
-      ml: nil,
+      model: nil,
       training_task: nil,
       trainer_state: nil,
       pubsub: opts[:pubsub],
@@ -106,7 +106,7 @@ defmodule FilerIndex.Trainer do
   def handle_call(request, from, state)
 
   def handle_call(:start, _, %{training_task: nil, task_supervisor: task_supervisor} = state) do
-    task = Task.Supervisor.async_nolink(task_supervisor, FilerIndex.Ml, :train, [])
+    task = Task.Supervisor.async_nolink(task_supervisor, FilerIndex.Model, :train, [])
     state = %{state | training_task: task.ref}
     {:reply, :ok, state}
   end
@@ -124,22 +124,22 @@ defmodule FilerIndex.Trainer do
     {:reply, state.trainer_state, state}
   end
 
-  def handle_call({:score, _}, _, %{ml: nil} = state) do
+  def handle_call({:score, _}, _, %{model: nil} = state) do
     {:reply, [], state}
   end
 
-  def handle_call({:score, content}, _, %{ml: ml} = state) do
-    {:reply, FilerIndex.Ml.score(content, ml), state}
+  def handle_call({:score, content}, _, %{model: model} = state) do
+    {:reply, FilerIndex.Model.score(content, model), state}
   end
 
   @impl true
   @spec handle_info(term(), state()) :: {:noreply, state()}
   def handle_info(message, state)
 
-  def handle_info({ref, ml}, %{training_task: ref} = state) do
+  def handle_info({ref, model}, %{training_task: ref} = state) do
     Logger.info("Training task succeeded")
     Process.demonitor(ref, [:flush])
-    state = %{state | ml: ml, training_task: nil}
+    state = %{state | model: model, training_task: nil}
     {:noreply, state}
   end
 

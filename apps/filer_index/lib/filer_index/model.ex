@@ -1,4 +1,4 @@
-defmodule FilerIndex.Ml do
+defmodule FilerIndex.Model do
   @moduledoc """
   Train and run a ML model.
 
@@ -23,7 +23,21 @@ defmodule FilerIndex.Ml do
   @fixed_height 11 * 72
   @batch_size 4
 
-  @type t() :: %{value_ids: Nx.t(), model: Axon.t(), params: term()}
+  @doc """
+  Internal type of the model.
+
+  """
+  defstruct [:value_ids, :model, :params]
+
+  @typedoc """
+  Internal type of the model.
+
+  `:value_ids` is a simple lookup vector of the database IDs for label values
+  used in the model.  `:model` is the actual Axon model, and `:params` is the
+  runtime parameters used in training.
+
+  """
+  @type t() :: %__MODULE__{value_ids: Nx.t(), model: Axon.t(), params: term()}
 
   @doc """
   Run the training task.
@@ -84,7 +98,7 @@ defmodule FilerIndex.Ml do
       |> Axon.Loop.run(datas, %{}, epochs: 12, iterations: batches)
 
     :ok = Filer.PubSub.broadcast_trainer_complete()
-    %{value_ids: value_ids, model: model, params: params}
+    %__MODULE__{value_ids: value_ids, model: model, params: params}
   end
 
   # Produce data for a batch of contents.
@@ -144,9 +158,23 @@ defmodule FilerIndex.Ml do
     |> Enum.map(&Filer.Labels.get_value/1)
   end
 
+  @doc """
+  Produce an Nx tensor for a content's image.
+
+  This requires that `FilerStore` contain an object with the content hash of
+  type `:png` and variant `:res72`.  This is normally created by the
+  `FilerIndex.Workers.Render72` job.  The resulting tensor has a fixed shape
+  `{h, w, c}` where `h` is a fixed height, `w` is a fixed width, and `c` is
+  3 RGB channels.  In the current implementation, this is exactly 11 inches
+  tall and 8.5 inches wide at 72 dpi, with the image being padded or cropped
+  to that size if it is different.
+
+  This may be prerendered in the future, if loading a tensor from a binary
+  from a file is faster than this transformation.
+
+  """
+  @spec content_image(Filer.Files.Content.t()) :: Nx.t()
   def content_image(content) do
-    # We might consider prerendering this.
-    #
     # Take the 72dpi image; flatten it to a single channel; pad and/or crop it
     # to exactly 8.5x11 at 72 dpi.
     {:ok, png} = FilerStore.get(FilerStore, {content.hash, :png, :res72})
