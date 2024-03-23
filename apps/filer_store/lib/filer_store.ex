@@ -55,6 +55,11 @@ defmodule FilerStore do
   Unconditionally returns `:ok`, even if there is an internal error inside
   the server.
 
+  ### Examples
+
+      iex> put(FilerStore, {hash, :pdf}, binary)
+      :ok
+
   """
   @spec put(GenServer.server(), address(), binary()) :: :ok
   def put(pid = FilerStore, address, bytes) do

@@ -30,9 +30,9 @@ defmodule FilerIndex.Plugins.Score do
   def handle_info({:trainer_state, _}, state), do: {:noreply, state}
   def handle_info({:trainer_failed, _}, state), do: {:noreply, state}
 
-  def handle_info(:trainer_complete, state) do
-    Filer.Files.list_content_ids()
-    |> Enum.map(&FilerIndex.Workers.Score.new(%{"content_id" => &1}))
+  def handle_info({:trainer_complete, hash}, state) do
+    _ = Filer.Files.list_content_ids()
+    |> Enum.map(&FilerIndex.Workers.Score.new(%{"content_id" => &1, "model_hash" => hash}))
     |> Oban.insert_all()
 
     {:noreply, state}

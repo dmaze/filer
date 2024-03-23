@@ -40,16 +40,63 @@ defmodule FilerIndex.Model do
   @type t() :: %__MODULE__{value_ids: Nx.t(), model: Axon.t(), params: term()}
 
   @doc """
+  Run the training task, advertising execution and perisiting the result.
+
+  This takes a fairly long time, at least "minutes".  Run it in a Task, an
+  Oban worker, or some other asynchronous container.
+
+  This wraps `train/0`.  It sends `Filer.PubSub` events when training starts
+  and completes, including on error.  On success, it serializes the result
+  to a binary, stores it in `FilerStore`, records a record in the database,
+  and includes the model hash in the advertised result.
+
+  Returns the built model, if this is called in a context where that's useful.
+
+  """
+  @spec train_and_store(Phoenix.PubSub.t()) :: t()
+  def train_and_store(pubsub) do
+    :ok = Filer.PubSub.broadcast_trainer_start(pubsub)
+    model = train()
+    binary = serialize(model)
+    hash = :crypto.hash(:sha256, binary) |> Base.encode16(case: :lower)
+    :ok = FilerStore.put(FilerStore, {hash, :model}, binary)
+    Filer.Models.model_by_hash(hash)
+    :ok = Filer.PubSub.broadcast_trainer_complete(pubsub, hash)
+    model
+  rescue
+    e ->
+      _ = Filer.PubSub.broadcast_trainer_failed(pubsub, e)
+      reraise(e, __STACKTRACE__)
+  end
+
+  @doc """
+  Get a model by hash from the content store.
+
+  This does not specifically require the hash to be recorded in the database,
+  though it generally will be.
+
+  """
+  @spec from_store(String.t()) :: {:ok, t()} | :not_found
+  def from_store(hash) do
+    with {:ok, binary} <- FilerStore.get(FilerStore, {hash, :model}) do
+      {:ok, deserialize(binary)}
+    end
+  end
+
+  @doc """
   Run the training task.
 
   This takes a fairly long time, at least "minutes".  Run it in a Task or
   another asynchronous container.
 
+  This does the core work of training the model.  This does not on its own
+  send updates or store the result, aside from sending
+  `Filer.PubSub.broadcast_trainer_state/2` events while training is in
+  progress.    Use `train_and_store/0` to get updates and persistence.
+
   """
   @spec train() :: t()
   def train() do
-    :ok = Filer.PubSub.broadcast_trainer_start()
-
     # Get all of the manually-labeled content objects.  (This can't be that
     # many of them, and this doesn't include the underlying image data.)
     contents = Filer.Files.list_labeled_contents()
@@ -97,7 +144,6 @@ defmodule FilerIndex.Model do
       |> Axon.Loop.handle_event(:iteration_completed, &on_iteration_completed/1)
       |> Axon.Loop.run(datas, %{}, epochs: 12, iterations: batches)
 
-    :ok = Filer.PubSub.broadcast_trainer_complete()
     %__MODULE__{value_ids: value_ids, model: model, params: params}
   end
 
@@ -113,6 +159,7 @@ defmodule FilerIndex.Model do
     # per label, matching the value_ids.  This is almost a one-hot encoding,
     # except we allow a document to have multiple labels.
     value_ids = Nx.vectorize(value_ids, :value)
+
     label_vector = fn content ->
       Enum.map(content.labels, & &1.id)
       |> Nx.tensor()
@@ -203,5 +250,33 @@ defmodule FilerIndex.Model do
   defn rescale(t) do
     t = t - Nx.reduce_min(t)
     t / Nx.reduce_max(t)
+  end
+
+  @doc """
+  Serialize a built model to a binary.
+
+  The binary can be stored in a content store and decoded using
+  `deserialize/1`.
+
+  """
+  @spec serialize(t()) :: binary()
+  def serialize(%{value_ids: value_ids, model: model, params: params}) do
+    %{value_ids: Nx.serialize(value_ids), model_and_params: Axon.serialize(model, params)}
+    |> :erlang.term_to_binary()
+  end
+
+  @doc """
+  Reconstruct a serialized model.
+
+  The input must be the result of `serialize/1`, though it may come from
+  persisted storage.
+
+  """
+  @spec deserialize(binary()) :: t()
+  def deserialize(binary) do
+    %{value_ids: value_ids, model_and_params: model_and_params} = :erlang.binary_to_term(binary)
+    value_ids = Nx.deserialize(value_ids)
+    {model, params} = Axon.deserialize(model_and_params)
+    %__MODULE__{value_ids: value_ids, model: model, params: params}
   end
 end

@@ -17,12 +17,13 @@ defmodule FilerIndex.Trainer do
   be more efficient than polling.
 
   """
+  alias FilerIndex.Model
   use GenServer
   require Logger
 
   @type option() :: {:pubsub, Phoenix.PubSub.t(), :task_supervisor, GenServer.server()}
   @typep state() :: %{
-           model: FilerIndex.Model.t() | nil,
+           models: %{String.t() => Model.t()},
            training_task: reference() | nil,
            trainer_state: Axon.Loop.State.t() | nil,
            pubsub: Phoenix.PubSub.t(),
@@ -86,11 +87,23 @@ defmodule FilerIndex.Trainer do
     GenServer.call(trainer, {:score, content})
   end
 
+  @doc """
+  Score some unit of content against a specific model.
+
+  Returns a set of values from the specified model.  Returns an empty list
+  if that model does not exist.
+
+  """
+  @spec score(GenServer.server(), String.t(), Filer.Files.Content.t()) :: [Filer.Labels.Value.t()]
+  def score(trainer, model_hash, content) do
+    GenServer.call(trainer, {:score, model_hash, content})
+  end
+
   @impl true
   @spec init([option()]) :: {:ok, state()}
   def init(opts) do
     state = %{
-      model: nil,
+      models: %{},
       training_task: nil,
       trainer_state: nil,
       pubsub: opts[:pubsub],
@@ -105,8 +118,14 @@ defmodule FilerIndex.Trainer do
   @spec handle_call(term(), GenServer.from(), state()) :: {:reply, term(), state()}
   def handle_call(request, from, state)
 
-  def handle_call(:start, _, %{training_task: nil, task_supervisor: task_supervisor} = state) do
-    task = Task.Supervisor.async_nolink(task_supervisor, FilerIndex.Model, :train, [])
+  def handle_call(
+        :start,
+        _,
+        %{training_task: nil, task_supervisor: task_supervisor, pubsub: pubsub} = state
+      ) do
+    task =
+      Task.Supervisor.async_nolink(task_supervisor, FilerIndex.Model, :train_and_store, [pubsub])
+
     state = %{state | training_task: task.ref}
     {:reply, :ok, state}
   end
@@ -124,12 +143,23 @@ defmodule FilerIndex.Trainer do
     {:reply, state.trainer_state, state}
   end
 
-  def handle_call({:score, _}, _, %{model: nil} = state) do
-    {:reply, [], state}
+  def handle_call({:score, content}, _, state) do
+    {maybe_model, state} = get_newest_model(state)
+    values = case maybe_model do
+      nil -> []
+      model -> FilerIndex.Model.score(content, model)
+    end
+    {:reply, values, state}
   end
 
-  def handle_call({:score, content}, _, %{model: model} = state) do
-    {:reply, FilerIndex.Model.score(content, model), state}
+  def handle_call({:score, model_hash, content}, _, state) do
+    {maybe_model, state} = get_model(state, model_hash)
+    values = case maybe_model do
+        nil -> []
+        model -> FilerIndex.Model.score(content, model)
+      end
+
+    {:reply, values, state}
   end
 
   @impl true
@@ -145,20 +175,46 @@ defmodule FilerIndex.Trainer do
 
   def handle_info(
         {:DOWN, ref, :process, _pid, reason},
-        %{training_task: ref, pubsub: pubsub} = state
+        %{training_task: ref} = state
       ) do
     Logger.error("Training task failed: #{inspect(reason)}")
-    :ok = Filer.PubSub.broadcast_trainer_failed(pubsub, reason)
     state = %{state | training_task: nil}
     {:noreply, state}
   end
 
   def handle_info(:trainer_start, state), do: {:noreply, state}
-  def handle_info(:trainer_complete, state), do: {:noreply, state}
+  def handle_info({:trainer_complete, _}, state), do: {:noreply, state}
   def handle_info({:trainer_failed, _}, state), do: {:noreply, state}
 
   def handle_info({:trainer_state, trainer_state}, state) do
     state = %{state | trainer_state: trainer_state}
     {:noreply, state}
+  end
+
+  # Get the newest model, if the database knows of one.
+  @spec get_newest_model(state()) :: {Model.t() | nil, state()}
+  defp get_newest_model(state) do
+    case Filer.Models.newest_model() do
+      nil -> {nil, state}
+      model_rec -> get_model(state, model_rec.hash)
+    end
+  end
+
+  # Get a specific model by hash, caching it.
+  @spec get_model(state(), String.t()) :: {Model.t() | nil, state()}
+  defp get_model(state, hash) do
+    models =
+      state.models
+      |> Map.put_new_lazy(hash, fn ->
+        case Model.from_store(hash) do
+          :not_found -> nil
+          {:ok, model} -> model
+        end
+      end)
+
+    case Map.get(models, hash) do
+      nil -> {nil, state}
+      model -> {model, %{state | models: models}}
+    end
   end
 end

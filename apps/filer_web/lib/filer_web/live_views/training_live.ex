@@ -104,7 +104,7 @@ defmodule FilerWeb.TrainingLive do
     {:noreply, socket}
   end
 
-  def handle_info(:trainer_complete, socket) do
+  def handle_info({:trainer_complete, _}, socket) do
     socket = assign(socket, :running?, false)
     {:noreply, socket}
   end

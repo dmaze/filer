@@ -19,7 +19,8 @@ defmodule Filer.PubSub do
 
   `:trainer_start`: a model training run has started
 
-  `:trainer_complete`: a model training run has finished
+  `:trainer_complete`: a model training run has finished, including the
+  hash of the model
 
   `:trainer_failed`: a model training run has failed
 
@@ -28,7 +29,7 @@ defmodule Filer.PubSub do
   """
   @type message() ::
           :trainer_start
-          | :trainer_complete
+          | {:trainer_complete, String.t()}
           | {:trainer_failed, term()}
           | {:trainer_state, Axon.Loop.State.t()}
 
@@ -57,9 +58,9 @@ defmodule Filer.PubSub do
   end
 
   @doc "Send a finish-training event."
-  @spec broadcast_trainer_complete(Phoenix.PubSub.t()) :: :ok | {:error, term()}
-  def broadcast_trainer_complete(pubsub \\ __MODULE__) do
-    broadcast(pubsub, topic_trainer(), :trainer_complete)
+  @spec broadcast_trainer_complete(Phoenix.PubSub.t(), String.t()) :: :ok | {:error, term()}
+  def broadcast_trainer_complete(pubsub \\ __MODULE__, hash) do
+    broadcast(pubsub, topic_trainer(), {:trainer_complete, hash})
   end
 
   @doc "Send a training-failed event."

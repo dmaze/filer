@@ -23,7 +23,7 @@ defmodule FilerIndex.Plugins.Prerender do
   @impl GenServer
   def init(_opts) do
     # create the preseed jobs
-    Files.list_content_hashes()
+    _ = Files.list_content_hashes()
     |> Enum.map(&FilerIndex.Workers.Render72.new(%{"hash" => &1}))
     |> Oban.insert_all()
 
