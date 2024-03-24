@@ -17,6 +17,27 @@ defmodule Filer.PubSub do
   @typedoc """
   Messages that may be sent by the publish/subscribe system.
 
+  ### Content events
+
+  New-content events are on a dedicated channel, and include the content
+  database ID in the message.
+
+  `:content_new`: a new content record has been inserted
+
+  For other content events, the content database ID is included in both the
+  topic and the message.
+
+  `:content_deleted`: a content record has been deleted; also includes
+  the content hash
+
+  `:content_labeled`: a content record has been manually labeled
+
+  `:content_inferred`: a content record has new inferred values
+
+  ### Training events
+
+  Normally there should be only one training run at a time.
+
   `:trainer_start`: a model training run has started
 
   `:trainer_complete`: a model training run has finished, including the
@@ -28,7 +49,11 @@ defmodule Filer.PubSub do
 
   """
   @type message() ::
-          :trainer_start
+          {:content_new, integer()}
+          | {:content_deleted, integer(), String.t()}
+          | {:content_labeled, integer()}
+          | {:content_inferred, integer()}
+          | :trainer_start
           | {:trainer_complete, String.t()}
           | {:trainer_failed, term()}
           | {:trainer_state, Axon.Loop.State.t()}
@@ -37,6 +62,53 @@ defmodule Filer.PubSub do
   @spec broadcast(Phoenix.PubSub.t(), Phoenix.PubSub.topic(), message()) :: :ok | {:error, term()}
   defp broadcast(pubsub, topic, message) do
     Phoenix.PubSub.broadcast(pubsub, topic, message)
+  end
+
+  # CONTENT EVENTS
+
+  @doc "Name of the topic for global content updates."
+  @spec topic_content_global() :: String.t()
+  def topic_content_global(), do: "content"
+
+  @doc "Subscribe the current process to global content events."
+  @spec subscribe_content_global(Phoenix.PubSub.t()) :: :ok | {:error, term()}
+  def subscribe_content_global(pubsub \\ __MODULE__) do
+    Phoenix.PubSub.subscribe(pubsub, topic_content_global())
+  end
+
+  @doc "Send a new-content event."
+  @spec broadcast_content_new(Phoenix.PubSub.t(), integer()) :: :ok | {:error, term()}
+  def broadcast_content_new(pubsub \\ __MODULE__, id) do
+    broadcast(pubsub, topic_content_global(), {:content_new, id})
+  end
+
+  @doc "Name of the per-content topic for content updates."
+  @spec topic_content(integer()) :: String.t()
+  def topic_content(id), do: "content:#{id}"
+
+  @doc "Subscribe the current process to content events for a specific content."
+  @spec subscribe_content(Phoenix.PubSub.t(), integer()) :: :ok | {:error, term()}
+  def subscribe_content(pubsub \\ __MODULE__, id) do
+    Phoenix.PubSub.subscribe(pubsub, topic_content(id))
+  end
+
+  @doc "Send a content-deleted event."
+  @spec broadcast_content_deleted(Phoenix.PubSub.t(), integer(), String.t()) ::
+          :ok | {:error, term()}
+  def broadcast_content_deleted(pubsub \\ __MODULE__, id, hash) do
+    broadcast(pubsub, topic_content(id), {:content_deleted, id, hash})
+  end
+
+  @doc "Send a content-labeled event."
+  @spec broadcast_content_labeled(Phoenix.PubSub.t(), integer()) :: :ok | {:error, term()}
+  def broadcast_content_labeled(pubsub \\ __MODULE__, id) do
+    broadcast(pubsub, topic_content(id), {:content_labeled, id})
+  end
+
+  @doc "Send a content-inferred event."
+  @spec broadcast_content_inferred(Phoenix.PubSub.t(), integer()) :: :ok | {:error, term()}
+  def broadcast_content_inferred(pubsub \\ __MODULE__, id) do
+    broadcast(pubsub, topic_content(id), {:content_inferred, id})
   end
 
   # TRAINING EVENTS
