@@ -115,6 +115,31 @@ defmodule Filer.Files do
   end
 
   @doc """
+  Replace the inferred labels for a content object.
+
+  `inferrer` is a function that accepts a `Content` object and returns a list
+  of `Value`.  These completely replace the existing inferred values on that
+  content.  The existing inferences are preloaded, but nothing else.
+
+  Returns the updated content, again with inferences but nothing else
+  preloaded.  Sends a content-inferred pub/pub event on success.  Raises if
+  the `id` is invalid or the update otherwise cannot happen.
+
+  """
+  @spec update_content_inferences(integer(), (Content.t() -> [Value.t()])) :: Content.t()
+  def update_content_inferences(id, inferrer) do
+    q = from c in Content, preload: [:inferences]
+    content = Repo.get!(q, id)
+    values = inferrer.(content)
+
+    content
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:inferences, values)
+    |> Repo.update!()
+    |> tap(fn _ -> Filer.PubSub.broadcast_content_inferred(id) end)
+  end
+
+  @doc """
   Get many or all of the files.
 
   The files are in order by path.  The contents and their associated

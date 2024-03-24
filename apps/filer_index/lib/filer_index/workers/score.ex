@@ -4,18 +4,12 @@ defmodule FilerIndex.Workers.Score do
 
   """
   use Oban.Worker, queue: :score
-  import Ecto.Query, only: [from: 2]
+  alias Filer.Files
+  alias FilerIndex.Trainer
 
   @impl Oban.Worker
   def perform(%{args: %{"content_id" => id, "model_hash" => model_hash}}) do
-    q = from c in Filer.Files.Content, preload: [:inferences]
-    content = Filer.Repo.get!(q, id)
-    values = FilerIndex.Trainer.score(FilerIndex.Trainer, model_hash, content)
-
-    content
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_assoc(:inferences, values)
-    |> Filer.Repo.update!()
+    Files.update_content_inferences(id, &Trainer.score(Trainer, model_hash, &1))
 
     :ok
   end
@@ -23,7 +17,8 @@ defmodule FilerIndex.Workers.Score do
   # for backwards compatibility
   def perform(%{args: %{"content_id" => _} = args}) do
     case Filer.Models.newest_model() do
-      nil -> :ok # ignore
+      # ignore
+      nil -> :ok
       model -> perform(%{args | "model_hash" => model.hash})
     end
   end
