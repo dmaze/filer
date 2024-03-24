@@ -76,15 +76,18 @@ defmodule Filer.Files do
   @doc """
   Given a file hash, get or create a content object for it.
 
-  If this returns an existing object, nothing is preloaded.
+  If this returns an existing object, nothing is preloaded.  If this creates
+  a new object, a pub/sub event is sent.
 
   """
   @spec content_by_hash(String.t()) :: Filer.Files.Content.t()
   def content_by_hash(hash) do
-    Filer.Repo.insert!(%Content{hash: hash},
-      on_conflict: {:replace, [:hash]},
-      conflict_target: [:hash]
-    )
+    q = from c in Content, where: c.hash == ^hash
+
+    case Repo.one(q) do
+      nil -> Repo.insert!(%Content{hash: hash}) |> tap(&Filer.PubSub.broadcast_content_new(&1.id))
+      content -> content
+    end
   end
 
   @doc """
