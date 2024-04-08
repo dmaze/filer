@@ -17,6 +17,8 @@ defmodule Filer.Files do
   import Filer.Helpers
   alias Filer.Repo
 
+  ### META
+
   @doc """
   Observe that a file exists.
 
@@ -139,6 +141,8 @@ defmodule Filer.Files do
     |> tap(fn _ -> Filer.PubSub.broadcast_content_inferred(id) end)
   end
 
+  ### FILES
+
   @doc """
   Get many or all of the files.
 
@@ -158,7 +162,7 @@ defmodule Filer.Files do
 
   """
   @spec list_files([{:inferred_values, [Value.t()]} | {:no_inferred_categories, [Category.t()]}]) ::
-          list(FFile)
+          [FFile.t()]
   def list_files(opts \\ []) do
     import Ecto.Query, only: [dynamic: 2, from: 2]
 
@@ -223,20 +227,116 @@ defmodule Filer.Files do
   The file's content and its associated labels and inferences are preloaded.
 
   """
-  @spec get_file(String.t() | integer()) :: File.t() | nil
+  @spec get_file(String.t() | integer()) :: FFile.t() | nil
   def get_file(id) do
     q = from f in FFile, preload: [content: [:labels, :inferences]]
     get_thing(id, q)
   end
 
   @doc """
-  Get all of the content objects.
+  Gets a single file.
+
+  Raises `Ecto.NoResultsError` if the File does not exist.
+
+  ## Examples
+
+      iex> get_file!(123)
+      %File{}
+
+      iex> get_file!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  @spec get_file!(integer()) :: FFile.t()
+  def get_file!(id) do
+    q = from f in FFile, preload: [content: [:labels, :inferences]]
+    Repo.get!(q, id)
+  end
+
+  @doc """
+  Creates a file.
+
+  ## Examples
+
+      iex> create_file(%{field: value})
+      {:ok, %File{}}
+
+      iex> create_file(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec create_file(map()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
+  def create_file(attrs \\ %{}) do
+    %FFile{}
+    |> FFile.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a file.
+
+  ## Examples
+
+      iex> update_file(file, %{field: new_value})
+      {:ok, %File{}}
+
+      iex> update_file(file, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec update_file(FFile.t(), map()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
+  def update_file(%FFile{} = file, attrs) do
+    file
+    |> FFile.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a file.
+
+  ## Examples
+
+      iex> delete_file(file)
+      {:ok, %File{}}
+
+      iex> delete_file(file)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec delete_file(FFile.t()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
+  def delete_file(%FFile{} = file) do
+    Repo.delete(file)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking file changes.
+
+  ## Examples
+
+      iex> change_file(file)
+      %Ecto.Changeset{data: %File{}}
+
+  """
+  @spec change_file(FFile.t(), map()) :: Ecto.Changeset.t(FFile.t())
+  def change_file(%FFile{} = file, attrs \\ %{}) do
+    FFile.changeset(file, attrs)
+  end
+
+  ### CONTENTS
+
+  @doc """
+  Returns the list of contents.
 
   The objects are in any order.  They have their files, inferences, and
   labels preloaded.
 
+  ## Examples
+
+      iex> list_contents()
+      [%Content{}, ...]
+
   """
-  @spec list_contents() :: [Content]
+  @spec list_contents() :: [Content.t()]
   def list_contents() do
     q = from c in Content, preload: [:files, :inferences, :labels]
     Repo.all(q)
@@ -249,6 +349,7 @@ defmodule Filer.Files do
   not in any specific order.
 
   """
+  @spec list_content_ids() :: [integer()]
   def list_content_ids() do
     Repo.all(from c in Content, select: c.id)
   end
@@ -260,6 +361,7 @@ defmodule Filer.Files do
   are not in any specific order.
 
   """
+  @spec list_content_hashes() :: [String.t()]
   def list_content_hashes() do
     Repo.all(from c in Content, select: c.hash)
   end
@@ -271,9 +373,98 @@ defmodule Filer.Files do
   label.  The labels are preloaded.
 
   """
-  @spec list_labeled_contents() :: [Content]
+  @spec list_labeled_contents() :: [Content.t()]
   def list_labeled_contents() do
     q = from c in Content, join: v in assoc(c, :labels), preload: [:labels]
     Repo.all(q)
+  end
+
+  @doc """
+  Gets a single content.
+
+  Raises `Ecto.NoResultsError` if the Content does not exist.
+
+  ## Examples
+
+      iex> get_content!(123)
+      %Content{}
+
+      iex> get_content!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  @spec get_content!(integer()) :: Content.t()
+  def get_content!(id) do
+    q = from c in Content, preload: [:files, :inferences, :labels]
+    Repo.get!(q, id)
+  end
+
+  @doc """
+  Creates a content.
+
+  ## Examples
+
+      iex> create_content(%{field: value})
+      {:ok, %Content{}}
+
+      iex> create_content(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec create_content(map()) :: {:ok, Content.t()} | {:error, Ecto.Changeset.t()}
+  def create_content(attrs \\ %{}) do
+    %Content{}
+    |> Content.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates a content.
+
+  ## Examples
+
+      iex> update_content(content, %{field: new_value})
+      {:ok, %Content{}}
+
+      iex> update_content(content, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec update_content(Content.t(), map()) :: {:ok, Content.t()} | {:error, Ecto.Changeset.t()}
+  def update_content(%Content{} = content, attrs) do
+    content
+    |> Content.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes a content.
+
+  ## Examples
+
+      iex> delete_content(content)
+      {:ok, %Content{}}
+
+      iex> delete_content(content)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  @spec delete_content(Content.t()) :: {:ok, Content.t()} | {:error, Ecto.Changeset.t()}
+  def delete_content(%Content{} = content) do
+    Repo.delete(content)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking content changes.
+
+  ## Examples
+
+      iex> change_content(content)
+      %Ecto.Changeset{data: %Content{}}
+
+  """
+  @spec change_content(Content.t(), map()) :: Ecto.Changeset.t()
+  def change_content(%Content{} = content, attrs \\ %{}) do
+    Content.changeset(content, attrs)
   end
 end

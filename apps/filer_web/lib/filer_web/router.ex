@@ -32,10 +32,15 @@ defmodule FilerWeb.Router do
     live "/training", TrainingLive
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", FilerWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", FilerWeb do
+    pipe_through :api
+    resources "/contents", ContentController, except: [:new] do
+      get "/pdf", ContentController, :show_pdf
+      get "/png", ContentController, :show_png
+    end
+    post "/contents/pdf", ContentController, :create
+    resources "/files", FileController
+  end
 
   # Enable LiveDashboard in development
   if Application.compile_env(:filer_web, :dev_routes) do

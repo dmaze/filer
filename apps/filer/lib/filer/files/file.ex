@@ -21,7 +21,7 @@ defmodule Filer.Files.File do
   @doc false
   def changeset(file, attrs) do
     file
-    |> cast(attrs, [:path])
+    |> cast(attrs, [:path, :content_id])
     |> validate_required([:path])
     |> unique_constraint(:path)
     |> assoc_constraint(:content)
