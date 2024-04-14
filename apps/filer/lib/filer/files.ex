@@ -254,6 +254,21 @@ defmodule Filer.Files do
   end
 
   @doc """
+  Gets a single file by its path.
+
+  Returns `nil` if no file exists with the specified exact path.
+
+  If a file is returned, its content, associated labels, and associated
+  inferences are all preloaded.
+
+  """
+  @spec get_file_by_path(String.t()) :: FFile.t() | nil
+  def get_file_by_path(path) do
+    q = from f in FFile, where: f.path == ^path, preload: [content: [:labels, :inferences]]
+    Repo.one(q)
+  end
+
+  @doc """
   Creates a file.
 
   ## Examples
@@ -397,6 +412,18 @@ defmodule Filer.Files do
   def get_content!(id) do
     q = from c in Content, preload: [:files, :inferences, :labels]
     Repo.get!(q, id)
+  end
+
+  @doc """
+  Gets a single content by its hash.
+
+  Returns `nil` if the Content does not exist.
+
+  """
+  @spec get_content_by_hash(String.t()) :: Content.t() | nil
+  def get_content_by_hash(hash) do
+    q = from c in Content, where: c.hash == ^hash, preload: [:files, :inferences, :labels]
+    Repo.one(q)
   end
 
   @doc """

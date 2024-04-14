@@ -6,6 +6,16 @@ defmodule FilerWeb.FileController do
 
   action_fallback FilerWeb.FallbackController
 
+  def index(conn, %{"path" => path}) do
+    files =
+      case Files.get_file_by_path(path) do
+        nil -> []
+        f -> [f]
+      end
+
+    render(conn, :index, files: files)
+  end
+
   def index(conn, _params) do
     files = Files.list_files()
     render(conn, :index, files: files)

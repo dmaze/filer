@@ -8,6 +8,16 @@ defmodule FilerWeb.ContentController do
 
   plug :content_type, ["application/pdf"] when action in [:create]
 
+  def index(conn, %{"hash" => hash}) do
+    contents =
+      case Files.get_content_by_hash(hash) do
+        nil -> []
+        c -> [c]
+      end
+
+    render(conn, :index, contents: contents)
+  end
+
   def index(conn, _params) do
     contents = Files.list_contents()
     render(conn, :index, contents: contents)
@@ -41,7 +51,8 @@ defmodule FilerWeb.ContentController do
     end
   end
 
-  @spec read_entire_body(Plug.Conn.t(), iolist()) :: {:ok, iolist(), Plug.Conn.t()} | {:error, term()}
+  @spec read_entire_body(Plug.Conn.t(), iolist()) ::
+          {:ok, iolist(), Plug.Conn.t()} | {:error, term()}
   defp read_entire_body(conn, rev_prefix) do
     case Plug.Conn.read_body(conn) do
       {:ok, content, conn} ->

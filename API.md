@@ -22,6 +22,9 @@ though they are part of the application's internal data model.
 
 `GET /api/contents` -- returns a list of content objects.
 
+If this includes a query parameter `?hash=...` then this only returns the
+content objects that have the specified hash (at most one).
+
 ```json
 {
   "data": [
@@ -60,6 +63,10 @@ object in the same form as the `GET` request.
 ## Files
 
 `GET /api/files` -- returns a list of file objects.
+
+If this includes a query parameter `?path...` then this only returns the
+file objects that have exactly the specified path (no wildcards or other
+partial matches; at most one file).
 
 ```json
 {
