@@ -86,5 +86,4 @@ if config_env() == :prod do
   # Check `Plug.SSL` for all available options in `force_ssl`.
 end
 
-config :filer_index, root_dir: Path.expand("../data", __DIR__)
 config :filer_store, directory: Path.expand("../store", __DIR__)

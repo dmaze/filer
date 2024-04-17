@@ -11,135 +11,10 @@ defmodule Filer.Files do
 
   """
   import Ecto.Query, only: [from: 2]
-  alias Filer.Files.Content
-  alias Filer.Files.File, as: FFile
+  alias Filer.Files.{Content, File}
   alias Filer.Labels.{Inference, Value}
   import Filer.Helpers
   alias Filer.Repo
-
-  ### META
-
-  @doc """
-  Observe that a file exists.
-
-  Given a hash of its content, ensure the content entry exists.  Create
-  or update a file entry to refer to that content.
-
-  """
-  @spec observe_file(Path.t(), String.t()) :: Filer.Files.File.t()
-  def observe_file(path, hash) do
-    content_by_hash(hash)
-    |> Ecto.build_assoc(:files, path: path)
-    |> Repo.insert!(
-      conflict_target: [:path],
-      on_conflict: {:replace, [:content_id]}
-    )
-  end
-
-  @doc """
-  Compute a hash for the contents of a file path.
-
-  This always reads the named file.  It never consults the database.
-
-  """
-  @spec file_hash(Path.t()) :: {:ok, String.t()} | {:error, File.posix()}
-  def file_hash(path) do
-    File.open(path, [:binary, :read], fn f ->
-      IO.binstream(f, 65_536)
-      |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
-      |> :crypto.hash_final()
-      |> Base.encode16(case: :lower)
-    end)
-  end
-
-  @doc """
-  Determine whether a file needs to be updated.
-
-  It does if the file does not exist in the database, or if the
-  database hash disagrees with the contents of the file.  If it
-  does need updating, returns the hash.
-
-  """
-  @spec file_needs_update(Path.t()) :: :ok | {:update, String.t()} | {:error, File.posix()}
-  def file_needs_update(path) do
-    with {:ok, hash} <- file_hash(path) do
-      q = from f in FFile, where: f.path == ^path, preload: :content
-
-      case Filer.Repo.one(q) do
-        nil ->
-          {:update, hash}
-
-        file ->
-          if hash == file.content.hash, do: :ok, else: {:update, hash}
-      end
-    end
-  end
-
-  @doc """
-  Given a file hash, get or create a content object for it.
-
-  If this returns an existing object, nothing is preloaded.  If this creates
-  a new object, a pub/sub event is sent.
-
-  """
-  @spec content_by_hash(String.t()) :: Filer.Files.Content.t()
-  def content_by_hash(hash) do
-    q = from c in Content, where: c.hash == ^hash
-
-    case Repo.one(q) do
-      nil -> Repo.insert!(%Content{hash: hash}) |> tap(&Filer.PubSub.broadcast_content_new(&1.id))
-      content -> content
-    end
-  end
-
-  @doc """
-  Find some file containing a content object.
-
-  This finds a database record, where the file's content ID is the
-  specified content record, and the target file exists on disk.
-
-  This does not check that the target file is actually readable, or
-  that it contains the same content as in the hash.
-
-  Returns `nil` if the content object has no associated files, or none
-  of the recorded files exist on disk.
-
-  """
-  @spec any_file_for_content(Filer.Files.Content.t()) :: Filer.Files.File.t() | nil
-  def any_file_for_content(content) do
-    Ecto.assoc(content, :files)
-    |> Ecto.Query.select([:path])
-    |> Ecto.Query.order_by(:path)
-    |> Filer.Repo.all()
-    |> Stream.map(& &1.path)
-    |> Stream.filter(&File.exists?/1)
-    |> Enum.at(0)
-  end
-
-  @doc """
-  Replace the inferred labels for a content object.
-
-  `inferrer` is a function that accepts a `Content` object and returns a list
-  of `Value`.  These completely replace the existing inferred values on that
-  content.  The existing inferences are preloaded, but nothing else.
-
-  Returns the updated content, again with inferences but nothing else
-  preloaded.  Sends a content-inferred pub/pub event on success.  Raises if
-  the `id` is invalid or the update otherwise cannot happen.
-
-  """
-  @spec update_content_inferences(integer(), (Content.t() -> [Value.t()])) :: Content.t()
-  def update_content_inferences(id, inferrer) do
-    q = from c in Content, preload: [:inferences]
-    content = Repo.get!(q, id)
-    values = inferrer.(content)
-
-    content
-    |> Ecto.Changeset.change()
-    |> Ecto.Changeset.put_assoc(:inferences, values)
-    |> Repo.update!()
-    |> tap(fn _ -> Filer.PubSub.broadcast_content_inferred(id) end)
-  end
 
   ### FILES
 
@@ -162,7 +37,7 @@ defmodule Filer.Files do
 
   """
   @spec list_files([{:inferred_values, [Value.t()]} | {:no_inferred_categories, [Category.t()]}]) ::
-          [FFile.t()]
+          [File.t()]
   def list_files(opts \\ []) do
     import Ecto.Query, only: [dynamic: 2, from: 2]
 
@@ -205,7 +80,7 @@ defmodule Filer.Files do
       end
 
     query =
-      from f in FFile,
+      from f in File,
         as: :file,
         join: c in assoc(f, :content),
         as: :content,
@@ -227,9 +102,9 @@ defmodule Filer.Files do
   The file's content and its associated labels and inferences are preloaded.
 
   """
-  @spec get_file(String.t() | integer()) :: FFile.t() | nil
+  @spec get_file(String.t() | integer()) :: File.t() | nil
   def get_file(id) do
-    q = from f in FFile, preload: [content: [:labels, :inferences]]
+    q = from f in File, preload: [content: [:labels, :inferences]]
     get_thing(id, q)
   end
 
@@ -247,9 +122,9 @@ defmodule Filer.Files do
       ** (Ecto.NoResultsError)
 
   """
-  @spec get_file!(integer()) :: FFile.t()
+  @spec get_file!(integer()) :: File.t()
   def get_file!(id) do
-    q = from f in FFile, preload: [content: [:labels, :inferences]]
+    q = from f in File, preload: [content: [:labels, :inferences]]
     Repo.get!(q, id)
   end
 
@@ -262,9 +137,9 @@ defmodule Filer.Files do
   inferences are all preloaded.
 
   """
-  @spec get_file_by_path(String.t()) :: FFile.t() | nil
+  @spec get_file_by_path(String.t()) :: File.t() | nil
   def get_file_by_path(path) do
-    q = from f in FFile, where: f.path == ^path, preload: [content: [:labels, :inferences]]
+    q = from f in File, where: f.path == ^path, preload: [content: [:labels, :inferences]]
     Repo.one(q)
   end
 
@@ -280,10 +155,10 @@ defmodule Filer.Files do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec create_file(map()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
+  @spec create_file(map()) :: {:ok, File.t()} | {:error, Ecto.Changeset.t()}
   def create_file(attrs \\ %{}) do
-    %FFile{}
-    |> FFile.changeset(attrs)
+    %File{}
+    |> File.changeset(attrs)
     |> Repo.insert()
   end
 
@@ -299,10 +174,10 @@ defmodule Filer.Files do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec update_file(FFile.t(), map()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
-  def update_file(%FFile{} = file, attrs) do
+  @spec update_file(File.t(), map()) :: {:ok, File.t()} | {:error, Ecto.Changeset.t()}
+  def update_file(%File{} = file, attrs) do
     file
-    |> FFile.changeset(attrs)
+    |> File.changeset(attrs)
     |> Repo.update()
   end
 
@@ -318,8 +193,8 @@ defmodule Filer.Files do
       {:error, %Ecto.Changeset{}}
 
   """
-  @spec delete_file(FFile.t()) :: {:ok, FFile.t()} | {:error, Ecto.Changeset.t()}
-  def delete_file(%FFile{} = file) do
+  @spec delete_file(File.t()) :: {:ok, File.t()} | {:error, Ecto.Changeset.t()}
+  def delete_file(%File{} = file) do
     Repo.delete(file)
   end
 
@@ -332,9 +207,9 @@ defmodule Filer.Files do
       %Ecto.Changeset{data: %File{}}
 
   """
-  @spec change_file(FFile.t(), map()) :: Ecto.Changeset.t(FFile.t())
-  def change_file(%FFile{} = file, attrs \\ %{}) do
-    FFile.changeset(file, attrs)
+  @spec change_file(File.t(), map()) :: Ecto.Changeset.t(File.t())
+  def change_file(%File{} = file, attrs \\ %{}) do
+    File.changeset(file, attrs)
   end
 
   ### CONTENTS
@@ -427,6 +302,23 @@ defmodule Filer.Files do
   end
 
   @doc """
+  Given a file hash, get or create a content object for it.
+
+  If this returns an existing object, nothing is preloaded.  If this creates
+  a new object, a pub/sub event is sent.
+
+  """
+  @spec content_by_hash(String.t()) :: Content.t()
+  def content_by_hash(hash) do
+    q = from c in Content, where: c.hash == ^hash
+
+    case Repo.one(q) do
+      nil -> Repo.insert!(%Content{hash: hash}) |> tap(&Filer.PubSub.broadcast_content_new(&1.id))
+      content -> content
+    end
+  end
+
+  @doc """
   Creates a content.
 
   ## Examples
@@ -493,5 +385,30 @@ defmodule Filer.Files do
   @spec change_content(Content.t(), map()) :: Ecto.Changeset.t()
   def change_content(%Content{} = content, attrs \\ %{}) do
     Content.changeset(content, attrs)
+  end
+
+  @doc """
+  Replace the inferred labels for a content object.
+
+  `inferrer` is a function that accepts a `Content` object and returns a list
+  of `Value`.  These completely replace the existing inferred values on that
+  content.  The existing inferences are preloaded, but nothing else.
+
+  Returns the updated content, again with inferences but nothing else
+  preloaded.  Sends a content-inferred pub/pub event on success.  Raises if
+  the `id` is invalid or the update otherwise cannot happen.
+
+  """
+  @spec update_content_inferences(integer(), (Content.t() -> [Value.t()])) :: Content.t()
+  def update_content_inferences(id, inferrer) do
+    q = from c in Content, preload: [:inferences]
+    content = Repo.get!(q, id)
+    values = inferrer.(content)
+
+    content
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_assoc(:inferences, values)
+    |> Repo.update!()
+    |> tap(fn _ -> Filer.PubSub.broadcast_content_inferred(id) end)
   end
 end

@@ -28,7 +28,6 @@ defmodule FilerIndex.MixProject do
     [
       {:filer, in_umbrella: true},
       {:filer_store, in_umbrella: true},
-      {:file_system, ">= 0.2.8 and < 2.0.0"},
       {:oban, "~> 2.17"},
       {:nx, ">= 0.6.0 and < 0.8.0"},
       {:exla, ">= 0.6.0 and < 0.8.0"},
