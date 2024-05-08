@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+
+for candidate in ./filer ./filer_web; do
+  if [ -x "$candidate" ]; then
+    command="$candidate"
+    break
+  fi
+done
+
+if [ -z "$command" ]; then
+  echo "could not find main release application" >&2
+  exit 1
+fi
+
+exec "$command" eval Filer.Release.migrate

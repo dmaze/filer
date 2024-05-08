@@ -41,17 +41,12 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: String.to_integer(System.get_env("PORT") || "4000")
     ],
-    secret_key_base: secret_key_base
-
-  # ## Using releases
-  #
-  # If you are doing OTP releases, you need to instruct Phoenix
-  # to start each relevant endpoint:
-  #
-  #     config :filer_web, FilerWeb.Endpoint, server: true
-  #
-  # Then you can assemble a release by calling `mix release`.
-  # See `mix help release` for more information.
+    url: [
+      host: System.get_env("FILER_HOST_NAME") || "localhost",
+      port: System.get_env("FILER_HOST_PORT") || System.get_env("PORT") || 4000
+    ],
+    secret_key_base: secret_key_base,
+    server: true
 
   # ## SSL Support
   #
@@ -84,6 +79,18 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+
+  # Do try to run in distributed mode, using a local broadcast.
+  config :libcluster,
+    topologies: [
+      gossip: [
+        strategy: Cluster.Strategy.Gossip,
+        config: [
+          broadcast_only: true,
+          secret: System.get_env("GOSSIP_SECRET")
+        ]
+      ]
+    ]
 end
 
-config :filer_store, directory: Path.expand("../store", __DIR__)
+config :filer_store, directory: System.get_env("FILER_STORE", Path.expand("../store", __DIR__))

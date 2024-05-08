@@ -2,7 +2,8 @@ import Config
 
 # For production, don't forget to configure the url host
 # to something meaningful, Phoenix uses this information
-# when generating URLs.
+# when generating URLs.  This is actually set via environment
+# variables in runtime.exs.
 #
 # Note we also include the path to a cache manifest
 # containing the digested version of static files. This
@@ -10,7 +11,6 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :filer_web, FilerWeb.Endpoint,
-  url: [host: "example.com", port: 80],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production

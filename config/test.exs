@@ -25,3 +25,7 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+
+# Don't try too hard to run in distributed mode.
+config :libcluster, topologies: [local_epmd: [strategy: Cluster.Strategy.LocalEpmd]]

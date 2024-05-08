@@ -9,7 +9,108 @@ There are two main goals of this:
 
 As of this writing this is in a usable state for the binary-classification problem, and it's unlikely to progress to anything near production-quality.
 
-## Developer Setup
+## Workflow
+
+The application consists of two major parts.  The filer application itself includes the Web UI, content storage, and machine learning parts; these can be run separately if needed.  There is a separate scanner application that uploads local files into the application.
+
+A typical workflow will be to:
+
+1. Start the main application, with a separate data store
+2. Start the scanner, pointing at local files
+3. In the application, define labels and label documents
+4. In the application, invoke the ML training step
+5. Search for documents
+6. Refine labels and retrain
+
+## Building and Running
+
+### Docker Single Node
+
+Edit the `.env` file.  Set good-quality random values for `POSTGRES_PASSWORD`, `RELEASE_COOKIE`, and `SECRET_KEY_BASE`.  For example,
+
+```sh
+dd if=/dev/urandom bs=48 count=1 | base64
+```
+
+Also set `FILER_HOST_NAME` to a host name that will be externally reachable once the container is running.  If you are using Docker on native Linux or Docker Desktop on any platform, this will generally be `localhost`; if you are using Minikube then it will be the `minikube ip` address.
+
+Build the Docker images for the application.
+
+```sh
+docker compose --profile unified build
+```
+
+Start the database and run migrations.
+
+```sh
+docker compose --profile unified run filer migrate
+```
+
+Then start the application.
+
+```sh
+docker compose --profile unified up -d
+```
+
+The application will be accessible on `http://localhost:4000/`.
+
+Follow the instructions in "Scanning Local Files" below to load content into the system.
+
+### Local Single Node
+
+Build the application and scanner using the Elixir `mix` build tool
+
+```sh
+MIX_ENV=prod mix release filer
+(cd filer_scanner && MIX_ENV=prod mix release)
+```
+
+Create a PostgreSQL database using your choice of tooling.  Set an environment variable `DATABASE_URL` pointing at it.
+
+```sh
+export DATABASE_URL=ecto://username:passw0rd@hostname/dbname
+
+# Using the Minikube/Docker setup described below:
+export DATABASE_URL=ecto://postgres:passw0rd@$(minikube ip)/filer_dev
+```
+
+Set an environment variable `SECRET_KEY_BASE` to a random value.
+
+```sh
+export SECRET_KEY_BASE=$(dd if=/dev/random bs=30 count=1 | base64)
+```
+
+Create a directory to store persistent files and set an environment variable `FILER_STORE` pointing at it.
+
+```sh
+mkdir store
+export FILER_STORE="$PWD/store"
+```
+
+Start the application.
+
+```sh
+_build/prod/rel/filer/bin/filer start
+```
+
+The application will be accessible on `http://localhost:4000/`.
+
+Follow the instructions in "Scanning Local Files" below to load content into the system.
+
+### Scanning Local Files
+
+This applies to all paths above.
+
+Set an environment variable `FILER_PATH` pointing at your local data files, and run the scanner as well.  The scanner by default will exit as soon as all of the local files have been read in, though this could take a couple of minutes depending on the size of your local data.
+
+```sh
+export FILER_PATH=$HOME/Documents/pdf_files
+export FILER_URL=http://localhost:4000
+cd filer_scanner
+mix start --no-halt
+```
+
+### Developer Setup
 
 In this directory, create an empty directory named `store` to hold binary artifacts, like prerendered PNG files.
 

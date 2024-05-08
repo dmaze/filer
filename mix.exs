@@ -1,13 +1,15 @@
 defmodule Filer.Umbrella.MixProject do
   use Mix.Project
+  @version "0.1.0"
 
   def project do
     [
       apps_path: "apps",
-      version: "0.1.0",
+      version: @version,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      releases: releases()
     ]
   end
 
@@ -45,6 +47,31 @@ defmodule Filer.Umbrella.MixProject do
     [
       # run `mix setup` in all child apps
       setup: ["cmd mix setup"]
+    ]
+  end
+
+  defp releases do
+    [
+      filer: [
+        version: @version,
+        applications: [
+          filer_web: :permanent,
+          filer_index: :permanent,
+          filer_store: :permanent
+        ]
+      ],
+      filer_web: [
+        version: @version,
+        applications: [filer_web: :permanent]
+      ],
+      filer_index: [
+        version: @version,
+        applications: [filer_index: :permanent]
+      ],
+      filer_store: [
+        version: @version,
+        applications: [filer_store: :permanent]
+      ]
     ]
   end
 end
