@@ -33,16 +33,14 @@ defmodule FilerScanner.Scanner do
   end
 
   defp scan(api, path, dir) do
-    File.ls!(Path.join(path, dir))
-    |> Enum.each(fn f ->
-      f = Path.join(dir, f)
+    {dirs, files} =
+      File.ls!(Path.join(path, dir))
+      |> Stream.filter(&(!String.starts_with?(&1, ".")))
+      |> Stream.map(&Path.join(dir, &1))
+      |> Enum.split_with(fn f -> File.dir?(Path.join(path, f)) end)
 
-      if File.dir?(Path.join(path, f)) do
-        scan(api, path, f)
-      else
-        check(api, path, f)
-      end
-    end)
+    files |> Stream.filter(&String.ends_with?(&1, ".pdf")) |> Enum.each(&check(api, path, &1))
+    dirs |> Enum.each(&scan(api, path, &1))
   end
 
   @doc """
@@ -158,6 +156,7 @@ defmodule FilerScanner.Scanner do
             Logger.error(
               "#{filename} has SHA-256 hash #{hash} but got weird content response #{inspect(other)}"
             )
+
             :error
         end
 
