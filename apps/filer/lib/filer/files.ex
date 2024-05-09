@@ -290,6 +290,27 @@ defmodule Filer.Files do
   end
 
   @doc """
+  Gets a single content.
+
+  Returns `nil` if the Content does not exist.
+
+  ## Examples
+
+      iex> get_content!(123)
+      %Content{}
+
+      iex> get_content!(456)
+      nil
+
+  """
+  @spec get_content(integer()) :: Content.t() | nil
+  def get_content(id) do
+    q = from c in Content, preload: [:files, :inferences, :labels]
+    Repo.get(q, id)
+  end
+
+
+  @doc """
   Gets a single content by its hash.
 
   Returns `nil` if the Content does not exist.

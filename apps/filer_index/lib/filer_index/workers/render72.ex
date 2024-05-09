@@ -8,6 +8,15 @@ defmodule FilerIndex.Workers.Render72 do
   """
   use Oban.Worker, queue: :render
 
+  @doc """
+  Determine if a job needs to run for a given content hash.
+
+  """
+  @spec needed?(String.t()) :: boolean()
+  def needed?(hash) do
+    !FilerStore.exists?(FilerStore, {hash, :png, :res72})
+  end
+
   @impl Oban.Worker
   def perform(%{args: %{"hash" => hash}}) do
     if FilerStore.exists?(FilerStore, {hash, :png, :res72}) do
