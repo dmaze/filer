@@ -59,7 +59,7 @@ defmodule FilerIndex.Model do
     model = train()
     binary = serialize(model)
     hash = :crypto.hash(:sha256, binary) |> Base.encode16(case: :lower)
-    :ok = FilerStore.put({hash, :model}, binary)
+    :ok = Filer.Store.put({hash, :model}, binary)
     Filer.Models.model_by_hash(hash)
     :ok = Filer.PubSub.broadcast_trainer_complete(pubsub, hash)
     model
@@ -78,7 +78,7 @@ defmodule FilerIndex.Model do
   """
   @spec from_store(String.t()) :: {:ok, t()} | :not_found
   def from_store(hash) do
-    with {:ok, binary} <- FilerStore.get({hash, :model}) do
+    with {:ok, binary} <- Filer.Store.get({hash, :model}) do
       {:ok, deserialize(binary)}
     end
   end
@@ -224,7 +224,7 @@ defmodule FilerIndex.Model do
   def content_image(content) do
     # Take the 72dpi image; flatten it to a single channel; pad and/or crop it
     # to exactly 8.5x11 at 72 dpi.
-    {:ok, png} = FilerStore.get({content.hash, :png, :res72})
+    {:ok, png} = Filer.Store.get({content.hash, :png, :res72})
     image = StbImage.read_binary!(png) |> StbImage.to_nx()
 
     # (Note, this post-processing is inappropriate for Nx.Defn, for two

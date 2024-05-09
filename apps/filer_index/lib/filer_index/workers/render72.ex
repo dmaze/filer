@@ -14,23 +14,23 @@ defmodule FilerIndex.Workers.Render72 do
   """
   @spec needed?(String.t()) :: boolean()
   def needed?(hash) do
-    !FilerStore.exists?({hash, :png, :res72})
+    !Filer.Store.exists?({hash, :png, :res72})
   end
 
   @impl Oban.Worker
   def perform(%{args: %{"hash" => hash}}) do
-    if FilerStore.exists?({hash, :png, :res72}) do
+    if Filer.Store.exists?({hash, :png, :res72}) do
       :ok
     else
       with {:ok, pdf} <- get_pdf(hash),
            {:ok, png} <- render_png(pdf) do
-        FilerStore.put({hash, :png, :res72}, png)
+        Filer.Store.put({hash, :png, :res72}, png)
       end
     end
   end
 
   defp get_pdf(hash) do
-    case FilerStore.get({hash, :pdf}) do
+    case Filer.Store.get({hash, :pdf}) do
       {:ok, pdf} ->
         {:ok, pdf}
 

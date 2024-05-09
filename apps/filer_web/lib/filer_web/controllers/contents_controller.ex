@@ -12,7 +12,7 @@ defmodule FilerWeb.ContentsController do
   def png(conn, %{"id" => id_string}) do
     with {id, ""} <- Integer.parse(id_string),
          c when is_struct(c) <- Filer.Repo.get(Filer.Files.Content, id),
-         {:ok, content} <- FilerStore.get({c.hash, :png, :res72}) do
+         {:ok, content} <- Filer.Store.get({c.hash, :png, :res72}) do
       conn
       |> put_resp_content_type("image/png")
       |> send_resp(:ok, content)

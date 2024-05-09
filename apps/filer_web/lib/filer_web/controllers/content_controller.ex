@@ -26,7 +26,7 @@ defmodule FilerWeb.ContentController do
   def create(conn, _params) do
     {:ok, body, conn} = read_entire_body(conn, [])
     hash = :crypto.hash(:sha256, body) |> Base.encode16(case: :lower)
-    :ok = FilerStore.put({hash, :pdf}, IO.iodata_to_binary(body))
+    :ok = Filer.Store.put({hash, :pdf}, IO.iodata_to_binary(body))
     content = Files.content_by_hash(hash)
 
     conn
@@ -74,7 +74,7 @@ defmodule FilerWeb.ContentController do
   def show_pdf(conn, %{"content_id" => id}) do
     content = Files.get_content!(id)
 
-    case FilerStore.get({content.hash, :pdf}) do
+    case Filer.Store.get({content.hash, :pdf}) do
       {:ok, content} ->
         conn
         |> put_resp_content_type("application/pdf")
@@ -88,7 +88,7 @@ defmodule FilerWeb.ContentController do
   def show_png(conn, %{"content_id" => id}) do
     content = Files.get_content!(id)
 
-    case FilerStore.get({content.hash, :png, :res72}) do
+    case Filer.Store.get({content.hash, :png, :res72}) do
       {:ok, content} ->
         conn
         |> put_resp_content_type("image/png")

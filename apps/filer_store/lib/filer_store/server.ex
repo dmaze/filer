@@ -14,14 +14,7 @@ defmodule FilerStore.Server do
   """
   @type option() :: {:directory, String.t()}
 
-  @type message() ::
-          {:put, FilerStore.address(), binary()}
-          | {:get, FilerStore.address()}
-          | {:exists?, FilerStore.address()}
-          | {:delete, FilerStore.address()}
-          | {:content_exists?, FilerStore.hash()}
-          | {:delete_content, FilerStore.hash()}
-
+  # Internal state for the server.
   @typep state() :: %{directory: String.t()}
 
   @doc """
@@ -32,17 +25,6 @@ defmodule FilerStore.Server do
   def start_link(opts) do
     {store_opts, genserver_opts} = Keyword.split(opts, [:directory])
     GenServer.start_link(__MODULE__, store_opts, genserver_opts)
-  end
-
-  @doc """
-  Send a message to the server.
-
-  Exists principally for type-checking purposes.
-
-  """
-  @spec call(GenServer.server(), message()) :: any()
-  def call(pid, message) do
-    GenServer.call(pid, message)
   end
 
   @impl true
@@ -58,7 +40,7 @@ defmodule FilerStore.Server do
     Path.join([state.directory, "content", prefix, hash])
   end
 
-  @spec object_path(state(), FilerStore.address()) :: String.t()
+  @spec object_path(state(), Filer.Store.address()) :: String.t()
   defp object_path(state, {hash, format}) do
     object_path(state, {hash, format, nil})
   end
@@ -78,7 +60,7 @@ defmodule FilerStore.Server do
     Path.join([directory, filename])
   end
 
-  @spec handle_call(message(), GenServer.from(), state()) :: any()
+  @spec handle_call(Filer.Store.message(), GenServer.from(), state()) :: any()
   @impl true
   def handle_call(message, from, state)
 

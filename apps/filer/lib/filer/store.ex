@@ -1,4 +1,4 @@
-defmodule FilerStore do
+defmodule Filer.Store do
   @moduledoc """
   Object storage for files.
 
@@ -9,6 +9,8 @@ defmodule FilerStore do
 
   All of these functions make calls to a server.  The server itself does not
   do computation on the files, and these functions should all return quickly.
+  The server itself is in the `:filer_store` application; in a distributed
+  environment, other components will not explicitly depend on this.
 
   There is normally only one instance of the store, even in a distributed
   application, and this uses the `:global` registry to record this.  The
@@ -16,7 +18,6 @@ defmodule FilerStore do
   parameter should be omitted.
 
   """
-  alias FilerStore.Server
 
   @typedoc """
   Hash of a content object.
@@ -51,6 +52,18 @@ defmodule FilerStore do
   """
   @type address() :: {hash(), format()} | {hash(), format(), qualifier()}
 
+  @typedoc """
+  Messages that may be sent to the server process.
+
+  """
+  @type message() ::
+          {:put, address(), binary()}
+          | {:get, address()}
+          | {:exists?, address()}
+          | {:delete, address()}
+          | {:content_exists?, hash()}
+          | {:delete_content, hash()}
+
   @doc """
   Add some object to the store.
 
@@ -68,7 +81,7 @@ defmodule FilerStore do
   """
   @spec put(GenServer.server(), address(), binary()) :: :ok
   def put(pid \\ {:global, FilerStore}, address, bytes) do
-    Server.call(pid, {:put, address, bytes})
+    call(pid, {:put, address, bytes})
   end
 
   @doc """
@@ -77,7 +90,7 @@ defmodule FilerStore do
   """
   @spec get(GenServer.server(), address) :: {:ok, binary()} | :not_found
   def get(pid \\ {:global, FilerStore}, address) do
-    Server.call(pid, {:get, address})
+    call(pid, {:get, address})
   end
 
   @doc """
@@ -86,7 +99,7 @@ defmodule FilerStore do
   """
   @spec exists?(GenServer.server(), address()) :: boolean()
   def exists?(pid \\ {:global, FilerStore}, address) do
-    Server.call(pid, {:exists?, address})
+    call(pid, {:exists?, address})
   end
 
   @doc """
@@ -95,7 +108,7 @@ defmodule FilerStore do
   """
   @spec delete(GenServer.server(), address()) :: :ok
   def delete(pid \\ {:global, FilerStore}, address) do
-    Server.call(pid, {:delete, address})
+    call(pid, {:delete, address})
   end
 
   @doc """
@@ -109,7 +122,7 @@ defmodule FilerStore do
   """
   @spec content_exists?(GenServer.server(), hash()) :: boolean()
   def content_exists?(pid \\ {:global, FilerStore}, hash) do
-    Server.call(pid, {:content_exists?, hash})
+    call(pid, {:content_exists?, hash})
   end
 
   @doc """
@@ -120,6 +133,12 @@ defmodule FilerStore do
   """
   @spec delete_content(GenServer.server(), hash()) :: :ok
   def delete_content(pid \\ {:global, FilerStore}, hash) do
-    Server.call(pid, {:delete_content, hash})
+    call(pid, {:delete_content, hash})
   end
+
+  # Send a message to the server.
+  #
+  # Exists principally for type-checking purposes.
+  @spec call(GenServer.server(), message()) :: any()
+  defp call(pid, message), do: GenServer.call(pid, message)
 end
