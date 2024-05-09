@@ -85,8 +85,8 @@ defmodule FilerWeb.TrainingLive do
       assign(socket,
         current_page: :training,
         page_title: "Training",
-        running?: FilerIndex.Trainer.training?(FilerIndex.Trainer),
-        state: FilerIndex.Trainer.trainer_state(FilerIndex.Trainer)
+        running?: Filer.Trainer.training?(),
+        state: Filer.Trainer.trainer_state()
       )
 
     {:ok, socket}
@@ -94,7 +94,7 @@ defmodule FilerWeb.TrainingLive do
 
   @impl true
   def handle_event("start", _, socket) do
-    FilerIndex.Trainer.train(FilerIndex.Trainer)
+    Filer.Trainer.train()
     {:noreply, socket}
   end
 

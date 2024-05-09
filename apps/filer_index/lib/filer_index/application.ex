@@ -10,7 +10,9 @@ defmodule FilerIndex.Application do
     children = [
       {Task.Supervisor, name: FilerIndex.TaskSupervisor},
       {FilerIndex.Trainer,
-       pubsub: Filer.PubSub, task_supervisor: FilerIndex.TaskSupervisor, name: FilerIndex.Trainer},
+       pubsub: Filer.PubSub,
+       task_supervisor: FilerIndex.TaskSupervisor,
+       name: {:global, FilerIndex.Trainer}},
       {Oban, oban_config}
     ]
 

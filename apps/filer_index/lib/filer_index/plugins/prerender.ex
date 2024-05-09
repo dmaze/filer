@@ -29,13 +29,20 @@ defmodule FilerIndex.Plugins.Prerender do
     :ok = Filer.PubSub.subscribe_content_global()
 
     # create the preseed jobs
+    GenServer.cast(self(), :preseed)
+
+    {:ok, nil}
+  end
+
+  @impl GenServer
+  def handle_cast(:preseed, state) do
     _ =
       Files.list_content_hashes()
       |> Stream.filter(&Render72.needed?/1)
       |> Enum.map(&Render72.new(%{"hash" => &1}))
       |> Oban.insert_all()
 
-    {:ok, nil}
+    {:noreply, state}
   end
 
   @impl GenServer

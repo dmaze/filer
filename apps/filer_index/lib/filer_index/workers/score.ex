@@ -5,11 +5,11 @@ defmodule FilerIndex.Workers.Score do
   """
   use Oban.Worker, queue: :score
   alias Filer.Files
-  alias FilerIndex.Trainer
+  alias Filer.Trainer
 
   @impl Oban.Worker
   def perform(%{args: %{"content_id" => id, "model_hash" => model_hash}}) do
-    Files.update_content_inferences(id, &Trainer.score(Trainer, model_hash, &1))
+    Files.update_content_inferences(id, &Trainer.score(model_hash, &1))
 
     :ok
   end
