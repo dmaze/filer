@@ -1,4 +1,5 @@
 defmodule FilerStore.Application do
+  @moduledoc false
   use Application
 
   @impl true
@@ -6,7 +7,7 @@ defmodule FilerStore.Application do
     directory = Application.fetch_env!(:filer_store, :directory)
 
     children = [
-      {FilerStore.Server, directory: directory, name: FilerStore}
+      {FilerStore.Server, directory: directory, name: {:global, FilerStore}}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: FilerStore.Supervisor)

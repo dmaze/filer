@@ -10,6 +10,11 @@ defmodule FilerStore do
   All of these functions make calls to a server.  The server itself does not
   do computation on the files, and these functions should all return quickly.
 
+  There is normally only one instance of the store, even in a distributed
+  application, and this uses the `:global` registry to record this.  The
+  API here supports passing the address of the store, but in typical use that
+  parameter should be omitted.
+
   """
   alias FilerStore.Server
 
@@ -57,12 +62,12 @@ defmodule FilerStore do
 
   ### Examples
 
-      iex> put(FilerStore, {hash, :pdf}, binary)
+      iex> put({hash, :pdf}, binary)
       :ok
 
   """
   @spec put(GenServer.server(), address(), binary()) :: :ok
-  def put(pid = FilerStore, address, bytes) do
+  def put(pid \\ {:global, FilerStore}, address, bytes) do
     Server.call(pid, {:put, address, bytes})
   end
 
@@ -71,7 +76,7 @@ defmodule FilerStore do
 
   """
   @spec get(GenServer.server(), address) :: {:ok, binary()} | :not_found
-  def get(pid = FilerStore, address) do
+  def get(pid \\ {:global, FilerStore}, address) do
     Server.call(pid, {:get, address})
   end
 
@@ -80,7 +85,7 @@ defmodule FilerStore do
 
   """
   @spec exists?(GenServer.server(), address()) :: boolean()
-  def exists?(pid = FilerStore, address) do
+  def exists?(pid \\ {:global, FilerStore}, address) do
     Server.call(pid, {:exists?, address})
   end
 
@@ -89,7 +94,7 @@ defmodule FilerStore do
 
   """
   @spec delete(GenServer.server(), address()) :: :ok
-  def delete(pid = FilerStore, address) do
+  def delete(pid \\ {:global, FilerStore}, address) do
     Server.call(pid, {:delete, address})
   end
 
@@ -103,7 +108,7 @@ defmodule FilerStore do
 
   """
   @spec content_exists?(GenServer.server(), hash()) :: boolean()
-  def content_exists?(pid = FilerStore, hash) do
+  def content_exists?(pid \\ {:global, FilerStore}, hash) do
     Server.call(pid, {:content_exists?, hash})
   end
 
@@ -114,7 +119,7 @@ defmodule FilerStore do
 
   """
   @spec delete_content(GenServer.server(), hash()) :: :ok
-  def delete_content(pid = FilerStore, hash) do
+  def delete_content(pid \\ {:global, FilerStore}, hash) do
     Server.call(pid, {:delete_content, hash})
   end
 end
