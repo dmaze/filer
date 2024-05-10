@@ -56,7 +56,24 @@ defmodule Filer.PubSub do
           | :trainer_start
           | {:trainer_complete, String.t()}
           | {:trainer_failed, term()}
-          | {:trainer_state, Axon.Loop.State.t()}
+          | {:trainer_state, trainer_state()}
+
+  @typedoc """
+  Current state of the ML training loop.
+
+  This is a slightly simplified version of `Axon.Loop.State`.  It omits the
+  fields that are specific to the running loop, and recasts the metric values
+  to plain numbers rather than `Nx` tensors.
+
+  """
+  @type trainer_state() :: %{
+    epoch: integer(),
+    max_epoch: integer(),
+    iteration: integer(),
+    max_iteration: integer(),
+    metrics: %{String.t() => number()},
+    times: %{integer() => integer()}
+  }
 
   # Type-checked wrapper around Phoenix.PubSub.broadcast()
   @spec broadcast(Phoenix.PubSub.t(), Phoenix.PubSub.topic(), message()) :: :ok | {:error, term()}
@@ -142,7 +159,7 @@ defmodule Filer.PubSub do
   end
 
   @doc "Send a training-state event."
-  @spec broadcast_trainer_state(Phoenix.PubSub.t(), Axon.Loop.State.t()) :: :ok | {:error, term()}
+  @spec broadcast_trainer_state(Phoenix.PubSub.t(), trainer_state()) :: :ok | {:error, term()}
   def broadcast_trainer_state(pubsub \\ __MODULE__, state) do
     broadcast(pubsub, topic_trainer(), {:trainer_state, state})
   end

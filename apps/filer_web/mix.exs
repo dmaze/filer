@@ -53,8 +53,6 @@ defmodule FilerWeb.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:petal_components, "~> 1.0"},
-      {:nx, "~> 0.6"}, # only for Nx.to_number/1
-      {:exla, "~> 0.6"}, # compat
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end

@@ -114,6 +114,7 @@ defmodule FilerIndex.Model do
 
     datas =
       contents
+      |> Stream.filter(&Filer.Store.exists?({&1.hash, :png, :res72}))
       |> Stream.chunk_every(@batch_size, @batch_size, :discard)
       |> Stream.map(&batch_data(&1, value_ids))
 
@@ -174,12 +175,25 @@ defmodule FilerIndex.Model do
     {images, label_matrix}
   end
 
+  @spec on_iteration_completed(Axon.Loop.State.t()) :: {:continue, Axon.Loop.State.t()}
   defp on_iteration_completed(state) do
-    :ok = Filer.PubSub.broadcast_trainer_state(state)
-    metrics = Enum.map_join(state.metrics, ", ", fn {k, v} -> "#{k}: #{Nx.to_number(v)}" end)
+    metrics = Map.new(state.metrics, fn {k, v} -> {k, Nx.to_number(v)} end)
+
+    pubsub_state = %{
+      epoch: state.epoch,
+      max_epoch: state.max_epoch,
+      iteration: state.iteration,
+      max_iteration: state.max_iteration,
+      metrics: metrics,
+      times: state.times
+    }
+
+    :ok = Filer.PubSub.broadcast_trainer_state(pubsub_state)
+
+    display_metrics = Enum.map_join(metrics, ", ", fn {k, v} -> "#{k}: #{v}" end)
 
     IO.puts(
-      "Epoch #{state.epoch}/#{state.max_epoch}, iteration #{state.iteration}/#{state.max_iteration}: #{metrics}"
+      "Epoch #{state.epoch}/#{state.max_epoch}, iteration #{state.iteration}/#{state.max_iteration}: #{display_metrics}"
     )
 
     {:continue, state}
@@ -193,16 +207,21 @@ defmodule FilerIndex.Model do
   """
   @spec score(Filer.Files.Content.t(), t()) :: [Filer.Labels.Value.t()]
   def score(content, %{value_ids: value_ids, model: model, params: params}) do
-    image = content_image(content)
-    input = Nx.new_axis(image, 0, :document)
+    case content_image(content) do
+      nil ->
+        []
 
-    Axon.predict(model, params, input)
-    |> Nx.greater(0.5)
-    |> Nx.multiply(value_ids)
-    |> Nx.flatten()
-    |> Nx.to_list()
-    |> Enum.filter(&(&1 > 0))
-    |> Enum.map(&Filer.Labels.get_value/1)
+      image ->
+        input = Nx.new_axis(image, 0, :document)
+
+        Axon.predict(model, params, input)
+        |> Nx.greater(0.5)
+        |> Nx.multiply(value_ids)
+        |> Nx.flatten()
+        |> Nx.to_list()
+        |> Enum.filter(&(&1 > 0))
+        |> Enum.map(&Filer.Labels.get_value/1)
+    end
   end
 
   @doc """
@@ -220,31 +239,36 @@ defmodule FilerIndex.Model do
   from a file is faster than this transformation.
 
   """
-  @spec content_image(Filer.Files.Content.t()) :: Nx.t()
+  @spec content_image(Filer.Files.Content.t()) :: Nx.t() | nil
   def content_image(content) do
-    # Take the 72dpi image; flatten it to a single channel; pad and/or crop it
-    # to exactly 8.5x11 at 72 dpi.
-    {:ok, png} = Filer.Store.get({content.hash, :png, :res72})
-    image = StbImage.read_binary!(png) |> StbImage.to_nx()
+    case Filer.Store.get({content.hash, :png, :res72}) do
+      :not_found ->
+        nil
 
-    # (Note, this post-processing is inappropriate for Nx.Defn, for two
-    # reasons: the input isn't a consistent shape, and the dynamic reshaping
-    # needs to leave tensor space.)
-    {h, w, c} = Nx.shape(image)
+      {:ok, png} ->
+        # Take the 72dpi image; flatten it to a single channel; pad and/or crop it
+        # to exactly 8.5x11 at 72 dpi.
+        image = StbImage.read_binary!(png) |> StbImage.to_nx()
 
-    # If there is only a single channel, duplicate it; if there is an alpha channel, drop it.
-    image =
-      case c do
-        1 -> Nx.broadcast(image, {h, w, 3})
-        3 -> image
-        4 -> Nx.pad(image, 0, [{0, 0, 0}, {0, 0, 0}, {0, -1, 0}])
-      end
+        # (Note, this post-processing is inappropriate for Nx.Defn, for two
+        # reasons: the input isn't a consistent shape, and the dynamic reshaping
+        # needs to leave tensor space.)
+        {h, w, c} = Nx.shape(image)
 
-    # Rescale the image to a range 0-1
-    image = rescale(image)
+        # If there is only a single channel, duplicate it; if there is an alpha channel, drop it.
+        image =
+          case c do
+            1 -> Nx.broadcast(image, {h, w, 3})
+            3 -> image
+            4 -> Nx.pad(image, 0, [{0, 0, 0}, {0, 0, 0}, {0, -1, 0}])
+          end
 
-    # Reshape it to a target shape, padding or cropping as needed
-    Nx.pad(image, 1.0, [{0, @fixed_height - h, 0}, {0, @fixed_width - w, 0}, {0, 0, 0}])
+        # Rescale the image to a range 0-1
+        image = rescale(image)
+
+        # Reshape it to a target shape, padding or cropping as needed
+        Nx.pad(image, 1.0, [{0, @fixed_height - h, 0}, {0, @fixed_width - w, 0}, {0, 0, 0}])
+    end
   end
 
   defn rescale(t) do

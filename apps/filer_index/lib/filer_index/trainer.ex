@@ -15,7 +15,7 @@ defmodule FilerIndex.Trainer do
   @typep state() :: %{
            models: %{String.t() => Model.t()},
            training_task: reference() | nil,
-           trainer_state: Axon.Loop.State.t() | nil,
+           trainer_state: Filer.PubSub.trainer_state() | nil,
            pubsub: Phoenix.PubSub.t(),
            task_supervisor: GenServer.server()
          }

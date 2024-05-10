@@ -43,16 +43,15 @@ defmodule FilerWeb.TrainingLive do
   end
 
   def metric_card(assigns) do
-    v = Nx.to_number(assigns.value)
-    percent = round(v * 100)
+    percent = round(assigns.value * 100)
 
     display =
       case assigns.key do
         k when k in ["accuracy", "precision", "recall"] ->
-          :erlang.float_to_binary(v * 100, decimals: 1) <> "%"
+          :erlang.float_to_binary(assigns.value * 100, decimals: 1) <> "%"
 
         _ ->
-          :erlang.float_to_binary(v, decimals: 3)
+          :erlang.float_to_binary(assigns.value, decimals: 3)
       end
 
     color =
