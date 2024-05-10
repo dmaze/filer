@@ -12,7 +12,7 @@ defmodule Filer.Files do
   """
   import Ecto.Query, only: [from: 2]
   alias Filer.Files.{Content, File}
-  alias Filer.Labels.{Inference, Value}
+  alias Filer.Labels.{Category, Inference, Value}
   import Filer.Helpers
   alias Filer.Repo
 
