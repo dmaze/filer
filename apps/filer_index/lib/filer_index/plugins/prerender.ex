@@ -28,21 +28,28 @@ defmodule FilerIndex.Plugins.Prerender do
     # subscribe to events when content appears
     :ok = Filer.PubSub.subscribe_content_global()
 
-    # create the preseed jobs
-    GenServer.cast(self(), :preseed)
-
-    {:ok, nil}
+    {:ok, %{preseeded: false}, {:continue, :preseed}}
   end
 
   @impl GenServer
-  def handle_cast(:preseed, state) do
-    _ =
-      Files.list_content_hashes()
-      |> Stream.filter(&Render72.needed?/1)
-      |> Enum.map(&Render72.new(%{"hash" => &1}))
-      |> Oban.insert_all()
-
+  def handle_continue(:preseed, %{preseeded: true} = state) do
     {:noreply, state}
+  end
+
+  def handle_continue(:preseed, state) do
+    case Filer.Store.whereis() do
+      nil ->
+        {:noreply, state, 1000}
+
+      _ ->
+        _ =
+          Files.list_content_hashes()
+          |> Stream.filter(&Render72.needed?/1)
+          |> Enum.map(&Render72.new(%{"hash" => &1}))
+          |> Oban.insert_all()
+
+        {:noreply, %{state | preseeded: true}}
+    end
   end
 
   @impl GenServer
@@ -50,19 +57,21 @@ defmodule FilerIndex.Plugins.Prerender do
     case Files.get_content(id) do
       nil ->
         Logger.error("saw pubsub message for missing content id #{id}")
-        {:noreply, state}
 
       %{hash: hash} ->
         changeset = Render72.new(%{"hash" => hash})
 
         case Oban.insert(changeset) do
-          {:ok, _job} ->
-            {:noreply, state}
+          {:ok, _job} -> nil
 
           {:error, reason} ->
             Logger.error("could not insert render72 job: #{inspect(reason)}")
-            {:noreply, state}
         end
     end
+    {:noreply, state, {:continue, :preseed}}
+  end
+
+  def handle_info(:timeout, state) do
+    {:noreply, state, {:continue, :preseed}}
   end
 end

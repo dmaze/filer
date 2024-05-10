@@ -136,6 +136,14 @@ defmodule Filer.Store do
     call(pid, {:delete_content, hash})
   end
 
+  @doc """
+  Get the location of the store server, if it is running.
+
+  """
+  def whereis(pid \\ {:global, FilerStore}) do
+    GenServer.whereis(pid)
+  end
+
   # Send a message to the server.
   #
   # Exists principally for type-checking purposes.
