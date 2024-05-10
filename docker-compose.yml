@@ -42,6 +42,9 @@ services:
     build:
       context: .
       target: runner_web
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       GOSSIP_SECRET:
       RELEASE_COOKIE:
@@ -57,10 +60,15 @@ services:
     build:
       context: .
       target: runner_index
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       GOSSIP_SECRET:
       RELEASE_COOKIE:
       DATABASE_URL: ecto://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+      ###
+      SECRET_KEY_BASE:
   store:
     profiles:
       - distributed
@@ -70,6 +78,9 @@ services:
     environment:
       GOSSIP_SECRET:
       RELEASE_COOKIE:
+      ###
+      SECRET_KEY_BASE:
+      DATABASE_URL: ecto://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
     volumes:
       - store:/store
 volumes:

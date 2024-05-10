@@ -27,11 +27,11 @@ defmodule FilerIndex.MixProject do
   defp deps do
     [
       {:filer, in_umbrella: true},
-      {:filer_store, in_umbrella: true},
       {:oban, "~> 2.17"},
       {:nx, ">= 0.6.0 and < 0.8.0"},
       {:exla, ">= 0.6.0 and < 0.8.0"},
       # axon 0.6.1 doesn't converge running training
+      # https://github.com/elixir-nx/axon/issues/567
       {:axon, "0.6.0"},
       {:stb_image, "~> 0.6.0"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}

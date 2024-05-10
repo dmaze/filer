@@ -36,6 +36,7 @@ defmodule FilerStore.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:filer, in_umbrella: true}, # only for clustering
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end

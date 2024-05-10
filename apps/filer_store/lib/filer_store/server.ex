@@ -31,6 +31,7 @@ defmodule FilerStore.Server do
   @spec init([option()]) :: {:ok, state()}
   def init(args) do
     state = %{directory: Keyword.get(args, :directory)}
+    Logger.info("Filer store is started")
     {:ok, state}
   end
 

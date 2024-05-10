@@ -86,7 +86,6 @@ if config_env() == :prod do
       gossip: [
         strategy: Cluster.Strategy.Gossip,
         config: [
-          broadcast_only: true,
           secret: System.get_env("GOSSIP_SECRET")
         ]
       ]

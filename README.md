@@ -24,6 +24,8 @@ A typical workflow will be to:
 
 ## Building and Running
 
+Note that the Docker-based paths take a while to bring up.  The `Dockerfile` tries to make effective use of Docker layer caching, but even so, changes to any of the `mix.exs` files or the build-time `config.exs` or `prod.exs` configuration results in a full rebuild of dependencies.  A full dependency rebuild takes about 5 minutes on the author's system; building the Web application an additional full minute.
+
 ### Docker Single Node
 
 Edit the `.env` file.  Set good-quality random values for `POSTGRES_PASSWORD`, `RELEASE_COOKIE`, and `SECRET_KEY_BASE`.  For example,
@@ -55,6 +57,46 @@ docker compose --profile unified up -d
 The application will be accessible on `http://localhost:4000/`.
 
 Follow the instructions in "Scanning Local Files" below to load content into the system.
+
+### Docker Distributed
+
+This splits the application into three separate containers: one running the UI, one running background tasks such as PDF rendering and machine learning, and one running dedicated content storage.
+
+Follow all of the same instructions as in "Docker Single Node" above, except use a `docker compose --profile distributed` option, and run the migrations specifically via the Web container.
+
+Note that the compilation process can be fairly memory-hungry, particularly for the Web application, and you may need to separately build it.
+
+```sh
+docker compose --profile distributed build web
+docker compose --profile distributed build
+docker compose --profile distributed run web migrate
+docker compose --profile distributed up -d
+```
+
+### Docker on Minikube
+
+If you are using Minikube as your Docker environment, there are a couple of important considerations.
+
+The compilation process is fairly memory-hungry.  Some amount of the VM's memory gets consumed by the Kubernetes processes, but even so, it is very possible to run into memory issues building the application.  In practice you may need to set
+
+```sh
+minikube config set memory 8g
+minikube delete
+minikube start
+eval $(minikube docker-env)
+```
+
+The Minikube VM has its own IP address, and unlike Docker Desktop it does not automatically route ports from the host system.  Running
+
+```sh
+minikube ip
+```
+
+will print out the VM's IP address.  You will need to use this address:
+
+* In `.env`, as the `FILER_HOST_NAME`
+* In your browser, when you connect to the application
+* As the `FILER_URL` when you run the local scanner below
 
 ### Local Single Node
 
