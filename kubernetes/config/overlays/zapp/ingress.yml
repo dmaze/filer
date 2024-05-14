@@ -1,0 +1,15 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
+
+#@overlay/match by=overlay.subset({"kind": "Ingress"}), expects="1+"
+---
+spec:
+  rules:
+    #@overlay/match by=overlay.all
+    - http:
+        paths:
+          #@overlay/match by=overlay.all
+          - backend:
+              service:
+                #@overlay/replace via=lambda left, right: right + "-" + left
+                name: #@ data.values.name

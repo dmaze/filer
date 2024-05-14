@@ -1,0 +1,6 @@
+#@data/values-schema
+---
+#@schema/title "Installed application name"
+#@schema/desc "Name of this application.  This appears as a label on most objects, and as a prefix on object names."
+#@overlay/match expects=0
+name: filer

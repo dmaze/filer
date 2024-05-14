@@ -98,6 +98,12 @@ will print out the VM's IP address.  You will need to use this address:
 * In your browser, when you connect to the application
 * As the `FILER_URL` when you run the local scanner below
 
+### Kubernetes
+
+The application can be deployed on a Kubernetes environment using the Carvel tool set.  You will also need a local Docker environment; if you are using Minikube then you can use it as the Docker environment using the settings above.  See the [kubernetes](kubernetes) directory for more details.
+
+This does require a Kubernetes cluster, but it does not require any manual configuration of the various internal secrets.  As with the Docker-on-Minikube option, you will use the `minikube ip` address when connecting to the application and in the `FILER_URL` for the local scanner, but you will use the standard HTTP port 80 in these places.
+
 ### Local Single Node
 
 Build the application and scanner using the Elixir `mix` build tool

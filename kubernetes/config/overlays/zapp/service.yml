@@ -1,0 +1,11 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
+
+#@overlay/match by=overlay.subset({"kind": "Service"}), expects="1+"
+---
+spec:
+  selector:
+    #@overlay/match missing_ok=True
+    app.kubernetes.io/name: filer
+    #@overlay/match missing_ok=True
+    app.kubernetes.io/instance: #@ "filer-" + data.values.name

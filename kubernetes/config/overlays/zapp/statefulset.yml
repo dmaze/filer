@@ -1,0 +1,8 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
+
+#@overlay/match by=overlay.subset({"kind": "StatefulSet"}), expects="1+"
+---
+spec:
+  #@overlay/replace via=lambda left, right: right + "-" + left
+  serviceName: #@ data.values.name

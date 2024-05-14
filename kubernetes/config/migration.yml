@@ -1,0 +1,38 @@
+#@ load("@ytt:data", "data")
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migration
+  labels:
+    app.kubernetes.io/component: migration
+  annotations:
+    kapp.k14s.io/change-group: filer.dmaze.github.io/migration
+    kapp.k14s.io/change-rule.db: upsert after upserting filer.dmaze.github.io/db
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: migration
+    spec:
+      containers:
+        - name: migration
+          image: filer-web
+          args: [migrate]
+          env:
+            - name: FILER_HOST_NAME
+              value: #@ data.values.ingress.hostName
+            - name: FILER_HOST_PORT
+              value: #@ str(data.values.ingress.port)
+            - name: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+            - name: POSTGRES_HOST
+            - name: GOSSIP_SECRET
+            - name: RELEASE_COOKIE
+            - name: SECRET_KEY_BASE
+            - name: DATABASE_URL
+            - name: POD_IP
+            - name: FILER_NAME
+      restartPolicy: OnFailure

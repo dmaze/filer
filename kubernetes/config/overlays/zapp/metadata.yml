@@ -1,0 +1,14 @@
+#@ load("@ytt:data", "data")
+#@ load("@ytt:overlay", "overlay")
+
+#@overlay/match by=overlay.all, expects="1+"
+---
+metadata:
+  #@overlay/replace via=lambda left, right: right + "-" + left
+  name: #@ data.values.name
+  #@overlay/match missing_ok=True
+  labels:
+    #@overlay/match missing_ok=True
+    app.kubernetes.io/name: filer
+    #@overlay/match missing_ok=True
+    app.kubernetes.io/instance: #@ "filer-" + data.values.name

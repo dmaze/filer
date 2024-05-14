@@ -1,0 +1,56 @@
+#@data/values-schema
+---
+#@schema/title "Ingress configuration"
+#@schema/desc "Configuration for how to reach the application."
+ingress:
+  #@schema/title "External host name"
+  #@schema/desc "Externally-accessible host name.  This is the host the end user types into their browser; it is the host name of the system ingress controller, or any load balancers that may be in front of it.  This host name is embedded into generated URLs."
+  hostName: localhost
+
+  #@schema/title "External port"
+  #@schema/desc "Externally-accessible TCP port.  This may frequently be the standard HTTP port (80) or the standard HTTPS port (443).  This is the port corresponding to `hostName`, and it is also embedded into generated URLs."
+  port: 80
+
+  #@schema/title "Ingress class"
+  #@schema/desc "The ingress class name, if a non-system-default ingress controller is used."
+  className: ""
+
+#@schema/title "Web server configuration"
+#@schema/desc "Detailed configuration for the Web server module."
+web:
+  #@schema/title "Replica count"
+  #@schema/desc "Number of copies of the Web server to run."
+  #@schema/validation min=1
+  replicas: 1
+
+#@schema/title "Indexer configuration"
+#@schema/desc "Detailed configuration for the index module.  This performs various background tasks, including training the machine-learning model."
+index:
+  #@schema/title "Replica count"
+  #@schema/desc "Number of copies of the indexer to run."
+  #@schema/validation min=1
+  replicas: 1
+
+#@schema/title "Store configuration"
+#@schema/desc "Detailed configuration for the store module."
+store:
+  #@schema/title "Replica count"
+  #@schema/desc "Number of copies of the store component to run.  Must be exactly 1."
+  #@schema/validation min=1, max=1
+  replicas: 1
+
+  #@schema/title "Storage capacity"
+  #@schema/desc "Amount of storage to request, per replica.  This holds the original PDF documents plus any rendered PNG copies of them."
+  capacity: 5Gi
+
+#@schema/title "Database configuraton"
+#@schema/desc "Detailed configuration for the embedded database."
+db:
+  #@schema/title "Replica count"
+  #@schema/desc "Number of copies of the database to run.  Must be exactly 1."
+  #@schema/validation min=1, max=1
+  replicas: 1
+
+  #@schema/title "Storage capacity"
+  #@schema/desc "Amount of storage to request, per replica.  This holds object metadata and labels, but not actual object data or models."
+  capacity: 1Gi

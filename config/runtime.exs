@@ -80,16 +80,50 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
-  # Do try to run in distributed mode, using a local broadcast.
-  config :libcluster,
-    topologies: [
-      gossip: [
-        strategy: Cluster.Strategy.Gossip,
-        config: [
-          secret: System.get_env("GOSSIP_SECRET")
+  # Do try to run in distributed mode...
+  case System.get_env("FILER_NAME") do
+    nil ->
+      # ...for plain Docker or other local-network setup, using
+      # a gossip protocol.
+      config :libcluster,
+        topologies: [
+          gossip: [
+            strategy: Cluster.Strategy.Gossip,
+            config: [
+              secret: System.get_env("GOSSIP_SECRET")
+            ]
+          ]
         ]
-      ]
-    ]
+
+    filerName ->
+      # ...in Kubernetes, using its DNS system.
+      name = if filerName == "", do: & &1, else: &"#{filerName}-#{&1}"
+
+      config :libcluster,
+        topologies: [
+          k8sdns_index: [
+            strategy: Cluster.Strategy.Kubernetes.DNS,
+            config: [
+              application_name: "filer_index",
+              service: name.("index")
+            ]
+          ],
+          k8sdns_store: [
+            strategy: Cluster.Strategy.Kubernetes.DNS,
+            config: [
+              application_name: "filer_store",
+              service: name.("store")
+            ]
+          ],
+          k8sdns_web: [
+            strategy: Cluster.Strategy.Kubernetes.DNS,
+            config: [
+              application_name: "filer_web",
+              service: name.("web-headless")
+            ]
+          ]
+        ]
+  end
 end
 
 config :filer_store, directory: System.get_env("FILER_STORE", Path.expand("../store", __DIR__))

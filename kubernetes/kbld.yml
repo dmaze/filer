@@ -1,0 +1,21 @@
+apiVersion: kbld.k14s.io/v1alpha1
+kind: Config
+sources:
+  - image: filer-web
+    path: ../
+    docker:
+      buildx:
+        target: runner_web
+        buildkit: true
+  - image: filer-index
+    path: ../
+    docker:
+      buildx:
+        target: runner_index
+        buildkit: true
+  - image: filer-store
+    path: ../
+    docker:
+      buildx:
+        target: runner_store
+        buildkit: true
