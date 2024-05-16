@@ -4,7 +4,7 @@ import Config
 config :filer, Filer.Repo,
   username: "postgres",
   password: "passw0rd",
-  hostname: "192.168.64.4",
+  hostname: "192.168.64.14",
   database: "filer_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -76,4 +76,4 @@ config :phoenix, :plug_init_mode, :runtime
 config :phoenix, :stacktrace_depth, 20
 
 # Don't try to run in distributed mode.
-config :libcluster, topologies: [local_epmd: [strategy: Cluster.Strategy.LocalEpmd]]
+config :libcluster, topologies: [] # [local_epmd: [strategy: Cluster.Strategy.LocalEpmd]]

@@ -24,10 +24,8 @@ defmodule FilerWeb.Router do
     get "/contents/:id/png", ContentsController, :png
     live "/labels", LabelsLive, :index
     live "/labels/new", LabelsLive, :new_category
-    live "/labels/:id", LabelsLive, :category
     live "/labels/:id/edit", LabelsLive, :edit_category
     live "/labels/:id/values/new", LabelsLive, :new_value
-    live "/labels/:id/values/:value", LabelsLive, :value
     live "/labels/:id/values/:value/edit", LabelsLive, :edit_value
     live "/training", TrainingLive
   end
