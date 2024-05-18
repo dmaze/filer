@@ -28,13 +28,13 @@ Note that the Docker-based paths take a while to bring up.  The `Dockerfile` tri
 
 ### Docker Single Node
 
-Edit the `.env` file.  Set good-quality random values for `POSTGRES_PASSWORD`, `RELEASE_COOKIE`, and `SECRET_KEY_BASE`.  For example,
+Generate a `.env` file by running
 
 ```sh
-dd if=/dev/urandom bs=48 count=1 | base64
+MIX_ENV=prod mix filer.env
 ```
 
-Also set `FILER_HOST_NAME` to a host name that will be externally reachable once the container is running.  If you are using Docker on native Linux or Docker Desktop on any platform, this will generally be `localhost`; if you are using Minikube then it will be the `minikube ip` address.
+You can edit the `.env` file if you need to change any settings.  Of note, `FILER_HOST_NAME` needs to be a host name that will be externally reachable once the container is running.  The Mix task attempts to detect a Minikube environment, but you may need to change this value if it is not correctly determined.
 
 Build the Docker images for the application.
 
@@ -92,11 +92,7 @@ The Minikube VM has its own IP address, and unlike Docker Desktop it does not au
 minikube ip
 ```
 
-will print out the VM's IP address.  You will need to use this address:
-
-* In `.env`, as the `FILER_HOST_NAME`
-* In your browser, when you connect to the application
-* As the `FILER_URL` when you run the local scanner below
+will print out the VM's IP address.  The `mix filer.env` task should set this automatically as the `FILER_HOST_NAME`.  You will also need to use this address in your browser when you connect to the application, and as the `FILER_URL` when you run the local scanner below.
 
 ### Kubernetes
 

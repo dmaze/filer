@@ -22,6 +22,9 @@ erl_crash.dump
 # Temporary files, for example, from tests.
 /tmp/
 
+# Local configuration settings
+/.env
+
 # PDF content (or a symlink thereto)
 /data
 
