@@ -43,6 +43,7 @@ defmodule Filer.MixProject do
       {:jason, "~> 1.2"},
       {:briefly, "~> 0.5.0"},
       {:libcluster, "~> 3.3"},
+      {:prom_ex, "~> 1.9"},
       {:oban, "~> 2.17"}, # only for migrations
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]

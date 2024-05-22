@@ -80,6 +80,29 @@ if config_env() == :prod do
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
 
+  # Configure prom_ex to publish Prometheus-format metrics.
+  config :filer, Filer.PromEx,
+    disabled: false,
+    manual_metrics_start_delay: :no_delay,
+    drop_metrics_groups: [],
+    grafana:
+      (case System.get_env("GRAFANA_URL") do
+         nil ->
+           :disabled
+
+         url ->
+           [
+             host: url
+           ]
+       end),
+    metrics_server:
+      (with s when not is_nil(s) <- System.get_env("METRICS_SERVER_PORT"),
+            {p, ""} <- Integer.parse(s) do
+         [port: p]
+       else
+         _ -> :disabled
+       end)
+
   # Do try to run in distributed mode...
   case System.get_env("FILER_NAME") do
     nil ->

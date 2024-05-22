@@ -24,6 +24,12 @@ Other possible configuration options are listed in `config/**/schema.yml`, and `
 
 When you run the scanner, you will target the external ingress host name and port.
 
+## Observability
+
+This packaging includes a service-local Prometheus installation.  It can be accessed at `http://$(minikube ip)/prometheus`.
+
+The service Pods include the standard `prometheus.io/...` annotations.  If you have a cluster-global Prometheus, you can set a configuration value `prometheus.enabled=false` to skip the Prometheus installation.
+
 ## Implementation Notes
 
 ### ytt setup

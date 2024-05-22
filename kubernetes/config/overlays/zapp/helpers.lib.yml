@@ -1,0 +1,5 @@
+#@ load("@ytt:data", "data")
+
+#@ def prefix_name(left, _right):
+#@   return data.values.name + "-" + left
+#@ end

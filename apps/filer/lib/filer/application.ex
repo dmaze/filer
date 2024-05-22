@@ -8,6 +8,8 @@ defmodule Filer.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      # Publish metrics
+      Filer.PromEx,
       # Discover other nodes
       {Cluster.Supervisor, [Application.get_env(:libcluster, :topologies), [name: Filer.ClusterSupervisor]]},
       # Start the Ecto repository

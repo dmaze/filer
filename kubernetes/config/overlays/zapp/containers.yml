@@ -1,5 +1,6 @@
 #@ load("@ytt:data", "data")
 #@ load("@ytt:overlay", "overlay")
+#@ load("helpers.lib.yml", "prefix_name")
 
 #@overlay/match by=overlay.subset({"spec": {"template": {"metadata": {}}}}), expects="1+"
 ---
@@ -17,6 +18,9 @@ spec:
 spec:
   template:
     spec:
+      #@overlay/match missing_ok=True
+      #@overlay/replace or_add=False, via=prefix_name
+      serviceAccountName:
       containers:
         #@overlay/match by=overlay.subset({"env": []}), expects="0+"
         #@overlay/replace or_add=False, via=overlay.apply
@@ -25,11 +29,19 @@ spec:
             #@overlay/replace or_add=False, via=overlay.apply
             - valueFrom:
                 configMapKeyRef:
-                  #@overlay/replace via=lambda left, right: right + "-" + left
-                  name: #@ data.values.name
+                  #@overlay/replace via=prefix_name
+                  name:
             #@overlay/match by=overlay.subset({"valueFrom": {"secretKeyRef": {}}}), expects="0+"
             #@overlay/replace or_add=False, via=overlay.apply
             - valueFrom:
                 secretKeyRef:
-                  #@overlay/replace via=lambda left, right: right + "-" + left
-                  name: #@ data.values.name
+                  #@overlay/replace via=prefix_name
+                  name:
+      #@overlay/match missing_ok=True
+      #@overlay/replace or_add=False, via=overlay.apply
+      volumes:
+        #@overlay/match by=overlay.subset({"configMap": {}}), expects="0+"
+        #@overlay/replace or_add=False, via=overlay.apply
+        - configMap:
+            #@overlay/replace via=prefix_name
+            name:

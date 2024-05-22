@@ -1,0 +1,18 @@
+#@data/values-schema
+---
+#@schema/title "Prometheus configuraton"
+#@schema/desc "Detailed configuration for the Prometheus metrics aggregator."
+#@overlay/match missing_ok=True
+prometheus:
+  #@schema/title "Enable Prometheus"
+  #@schema/desc "Whether or not to run a service-specific Prometheus."
+  enabled: true
+
+  #@schema/title "Replica count"
+  #@schema/desc "Number of copies of Prometheus to run.  Must be exactly 1."
+  #@schema/validation min=1, max=1
+  replicas: 1
+
+  #@schema/title "Storage capacity"
+  #@schema/desc "Amount of storage to request, per replica."
+  capacity: 1Gi

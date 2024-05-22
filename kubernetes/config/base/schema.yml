@@ -3,6 +3,10 @@
 #@schema/title "Ingress configuration"
 #@schema/desc "Configuration for how to reach the application."
 ingress:
+  #@schema/title "URL scheme"
+  #@schema/desc "Externally-accessible URL scheme.  Should be `http` or `https`, depending on whether or not TLS is in use."
+  scheme: http
+
   #@schema/title "External host name"
   #@schema/desc "Externally-accessible host name.  This is the host the end user types into their browser; it is the host name of the system ingress controller, or any load balancers that may be in front of it.  This host name is embedded into generated URLs."
   hostName: localhost

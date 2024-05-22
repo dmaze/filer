@@ -17,6 +17,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/component: web
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9568"
     spec:
       containers:
         - name: web

@@ -1,0 +1,14 @@
+#@ load("@ytt:overlay", "overlay")
+#@ load("helpers.lib.yml", "prefix_name")
+
+#@overlay/match by=overlay.subset({"kind": "RoleBinding"})
+---
+roleRef:
+  #@overlay/replace via=prefix_name
+  name:
+subjects:
+  #@overlay/match by=overlay.subset({"kind": "ServiceAccount"})
+  #@overlay/replace or_add=False, via=overlay.apply
+  -
+    #@overlay/replace via=prefix_name
+    name:
